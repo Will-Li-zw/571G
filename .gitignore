@@ -17,6 +17,10 @@ artifacts
 cache
 gasReporterOutput.json
 
+# forge
+cache_forge
+out
+
 # VS Code
 vscode-user-settings.json
 vscode-workspace-settings.json
