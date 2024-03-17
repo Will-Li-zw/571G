@@ -53,6 +53,7 @@ import { useWeb3React } from '@web3-react/core';
 
 export function App(): React.ReactElement {
   const { active } = useWeb3React();
+  // console.log(active)
 
   return (
     <Router>

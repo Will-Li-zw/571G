@@ -34,9 +34,10 @@ const LoginButton = styled.button`
 
 export function LoginPage(): ReactElement {
   const { activate, active } = useWeb3React();
+//   console.log(active)
 
   // Automatically try to connect to MetaMask
-  useEagerConnect();
+//   useEagerConnect();
 
   // Handle the connection manually when the user clicks the button
   const handleLoginClick = async () => {

@@ -72,7 +72,7 @@ export const HomePage = () => {
     deactivate(); // Disconnect the wallet
     navigate('/'); // Redirect to the login page
   };
-
+  
   return (
     <PageContainer>
       <Header>
