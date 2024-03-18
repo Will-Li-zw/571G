@@ -113,8 +113,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
             id: cardId,
             owner: cardOwner,
             collection: collection,
-            price: 0,
-            isForSale: false
+            amount: 1
         }));
     }
 
