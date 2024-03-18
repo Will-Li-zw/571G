@@ -1,17 +1,16 @@
-// AccountInformation.tsx
-
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import { Typography, Card, CardContent, CardMedia, Grid, CircularProgress } from '@mui/material';
 
-const getBalance = async () => {
+// Assume you have a function to get random images. For demo purposes, let's use placeholder images.
+const getDrawTimes = async () => {
   // Mock balance fetching logic
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  return 100;
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  return 10;
 };
 
 const getCollection = async () => {
   // Mock collection fetching logic
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 100));
   return [
     { id: 1, name: 'Card 1' },
     { id: 2, name: 'Card 2' },
@@ -24,82 +23,77 @@ const getCollection = async () => {
   ];
 };
 
+const getRandomImage = (cardId:number) => {
+  // Here, you'd fetch or calculate an image URL based on the cardId or some other logic.
+  // For demonstration, return a placeholder or any image URL.
+  const images = [
+    'https://i.postimg.cc/3RXLFz5z/163111-1710059471b82d.jpg',
+    'https://i.postimg.cc/fR41mGPj/194048-1710070848523b.jpg',
+    'https://i.postimg.cc/rFTPp1RQ/TEC3-L07-N0965-lead-720x1280.png',
+    // Add more as needed or fetch dynamically
+  ];
+  return images[cardId % images.length]; // Simple modulus to cycle through images
+};
+
 const useAccountData = () => {
-  const [balance, setBalance] = useState<number | null>(null);
+  const [drawTimes, setDrawTimes] = useState<number | null>(null);
   const [collection, setCollection] = useState<{ id: number; name: string }[] | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      setBalance(await getBalance());
+      setDrawTimes(await getDrawTimes());
       setCollection(await getCollection());
     };
     fetchData();
   }, []);
 
-  return { balance, collection };
+  return { drawTimes, collection };
 };
 
-const AccountInformationContainer = styled.div`
-  // Add your styles for the container
-  padding: 16px;
-`;
-
-const BalanceDisplay = styled.div`
-  // Add your styles for the balance display
-  margin-bottom: 16px; // Add some space below the balance
-`;
-
-const CollectionDisplay = styled.div`
-  display: flex;
-  flex-direction:column;
-  flex-wrap: wrap;
-  gap: 10px; // Provides space between cards horizontally and vertically
-  justify-content: flex-start; // Aligns cards to the start of the container
-  align-items: flex-start; // Aligns cards to the top of the container
-`;
-
-const CardRow = styled.div`
-display: flex;
-flex-wrap:wrap;
-`;
-
-const Card = styled.div`
-  border: 1px solid #ddd;
-  box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
-  padding: 16px;
-  border-radius: 8px;
-  height: 150px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: white;
-  width: 25%;
-`;
 const AccountInformation = () => {
-  const { balance, collection } = useAccountData();
+  const { drawTimes, collection } = useAccountData();
 
   return (
-    <AccountInformationContainer>
-      <BalanceDisplay>
-        <h2>Balance</h2>
-        <p>{balance !== null ? `${balance} ETH` : 'Loading...'} </p>
-      </BalanceDisplay>
-      <CollectionDisplay>
-        <h2>My Collection</h2>
-        <CardRow>
-        {collection !== null ? (
-          collection.map((card) => (
-            <Card key={card.id}>
-              {card.name}
-            </Card>
-          ))
+    <Grid container spacing={2} padding={2} alignItems="flex-start">
+      <Grid item xs={12}>
+        <Typography variant="h5" gutterBottom>
+          Draw Times Remaining
+        </Typography>
+        {drawTimes !== null ? (
+          <Typography variant="body1">{drawTimes}</Typography>
         ) : (
-          'Loading...'
-        )}    
-        </CardRow>
-        
-      </CollectionDisplay>
-    </AccountInformationContainer>
+          <CircularProgress />
+        )}
+      </Grid>
+      <Grid item xs={12}>
+        <Typography variant="h5" gutterBottom>
+          My Collection
+        </Typography>
+        <Grid container spacing={2}>
+          {collection !== null ? (
+            collection.map((card, index) => (
+              <Grid item xs={12} sm={6} md={3} key={index}>
+                <Card>
+                  <CardMedia
+                    component="img"
+                    height="140"
+                    image={getRandomImage(card.id)}
+                    alt={card.name}
+                  />
+                  <CardContent>
+                    <Typography variant="body1" textAlign="center">
+                      {card.name}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          ) : (
+            <CircularProgress />
+          )}
+        </Grid>
+      </Grid>
+    </Grid>
   );
 };
 

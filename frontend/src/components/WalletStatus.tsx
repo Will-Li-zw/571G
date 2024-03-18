@@ -259,12 +259,8 @@ function StatusIcon(): ReactElement {
 export function WalletStatus(): ReactElement {
   return (
     <StyledWalletStatusDiv>
-      <ChainId />
-      <BlockNumber />
       <Account />
       <Balance />
-      <NextNonce />
-      <StatusIcon />
     </StyledWalletStatusDiv>
   );
 }

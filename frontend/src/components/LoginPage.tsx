@@ -1,43 +1,15 @@
-import { ReactElement } from 'react';
-import styled from 'styled-components';
+import React from 'react';
 import { useWeb3React } from '@web3-react/core';
 import { injected } from '../utils/connectors';
 import { useEagerConnect, useInactiveListener } from '../utils/hooks';
+import { Container, Typography, Button, Box } from '@mui/material';
+// import { ReactComponent as MetaMaskIcon } from '../assets/metamask.svg'; // Assume you have a MetaMask SVG icon
 
-const LoginPageDiv = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-`;
-
-const Logo = styled.div`
-  /* Add styles for your logo here */
-`;
-
-const ProjectName = styled.h1`
-  margin: 20px 0;
-`;
-
-const LoginButton = styled.button`
-  width: 200px;
-  height: 40px;
-  border-radius: 20px;
-  font-size: 1rem;
-  cursor: pointer;
-  border: 2px solid black; /* Change as needed */
-  &:hover {
-    background-color: #f0f0f0; /* Change as needed */
-  }
-`;
-
-export function LoginPage(): ReactElement {
+export function LoginPage() {
   const { activate, active } = useWeb3React();
-//   console.log(active)
 
   // Automatically try to connect to MetaMask
-//   useEagerConnect();
+  // useEagerConnect();
 
   // Handle the connection manually when the user clicks the button
   const handleLoginClick = async () => {
@@ -51,12 +23,23 @@ export function LoginPage(): ReactElement {
   useInactiveListener(!active);
 
   return (
-    <LoginPageDiv>
-      <Logo>Logo</Logo>
-      <ProjectName>Your Project Name</ProjectName>
-      <LoginButton onClick={handleLoginClick} disabled={active}>
+    <Container maxWidth="xs" sx={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+      <Box sx={{ mb: 4 }}>
+        {/* <MetaMaskIcon width={64} height={64} /> */}
+      </Box>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Pyramid
+      </Typography>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleLoginClick}
+        disabled={active}
+        // startIcon={<MetaMaskIcon />}
+        sx={{ mt: 2, width: '100%', borderRadius: 20, p: '10px' }}
+      >
         {active ? 'Connected' : 'Login with MetaMask'}
-      </LoginButton>
-    </LoginPageDiv>
+      </Button>
+    </Container>
   );
 }
