@@ -48,7 +48,7 @@ contract PyramidCardsTest is Test {
     // test 1 -- test addbalance
     function testAddBalance() public {
         vm.startPrank(customer);
-        pyramidCards.AddBalance{value: 1 ether}();
+        pyramidCards.addBalance{value: 1 ether}();
         uint256 balance = pyramidCards.userBalances(customer);
         assertEq(balance, 1 ether);
         vm.stopPrank();

@@ -82,15 +82,56 @@ contract PyramidCards is VRFConsumerBaseV2 {
     }
 
     function redeemChance(uint256 id) external {
-        
+        bool cardFound = false;
+        // Find the card in the user's collection and check the quantity
+        for (uint i = 0; i < userCollection[msg.sender].length; i++) {
+            if (userCollection[msg.sender][i].id == id) {
+                require(userCollection[msg.sender][i].quantity >= NUMS_EXCHANGE_CHANCE, "Not enough cards to redeem chance");
+                
+                // Deduct from the card's quantity
+                userCollection[msg.sender][i].quantity -= NUMS_EXCHANGE_CHANCE;
+
+                // Remove the card from array if the quantity is now zero
+                if (userCollection[msg.sender][i].quantity == 0) {
+                    removeCardFromCollection(msg.sender, i);
+                }
+
+                cardFound = true;
+                break;
+            }
+        }
+
+        // Revert if the card was not in the user's collection after iteration
+        require(cardFound, "Card not found in collection");
+
+        // add draw chances
+        userBalances[msg.sender]++;
+    }
+
+    // Helper function to remove a card from array
+    function removeCardFromCollection(address user, uint index) internal {
+        require(index < userCollection[user].length, "Index out of bounds");
+
+        // Move the last element into the place to delete, and remove the last element from the list
+        userCollection[user][index] = userCollection[user][userCollection[user].length - 1];
+        userCollection[user].pop();
     }
 
     function getUserCollection(address user) public view returns(uint256[] memory, uint256[] memory) {
+        uint256[] memory ids = new uint256[](userCollection[user].length);
+        uint256[] memory quantities = new uint256[](userCollection[user].length);
 
+        for (uint i = 0; i < userCollection[user].length; i++) {
+            ids[i] = userCollection[user][i].id;
+            quantities[i] = userCollection[user][i].quantity;
+        }
+
+        //return the id and corresponding quantities as arrays
+        return (ids, quantities);
     }
 
     function getUserBalances(address user) public view returns(uint256) {
-
+        return userBalances[user];
     }
     
 
@@ -155,7 +196,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
     }
 
     function getCollections() public view  {
-
+        
     }
 
     function getCollectionProbability() public view  {
