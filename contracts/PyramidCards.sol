@@ -36,6 +36,9 @@ contract PyramidCards is VRFConsumerBaseV2 {
     mapping(uint256 => address) s_requestIdToSender;
     mapping(uint256 => string) s_requestIdToCollection;
 
+    // number of cards to redeem for new chance
+    uint16 private constant NUMS_EXCHANGE_CHANCE = 4;
+
     // ============================================== Modifiers ==============================================
     modifier isAdmin(){
         require(msg.sender == admin, "You are not the admin, access denied");
@@ -70,14 +73,16 @@ contract PyramidCards is VRFConsumerBaseV2 {
     }
 
     // User can use this to add balance to theirselves
-    function AddBalance() external payable {
+    function addBalance() external payable {
         require(msg.value > 0, "The sent balance must be greater than 0");
-        // TODO: change to draw chances;
-        userBalances[msg.sender] += msg.value;
+        require(msg.value % PRICE == 0, "The sent balance must be multiple of unit price");
+        
+        // add to user's draw chances;
+        userBalances[msg.sender] += msg.value / PRICE;
     }
 
     function redeemChance(uint256 id) external {
-
+        
     }
 
     function getUserCollection(address user) public view returns(uint256[] memory, uint256[] memory) {
