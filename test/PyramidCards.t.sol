@@ -54,10 +54,21 @@ contract PyramidCardsTest is Test {
         vm.stopPrank();
     }
 
+    // User should not be able to draw a pool that does not exist.
+    function testRandom() public {
+        vm.startPrank(customer);
+        pyramidCards.AddBalance{value: 1 ether}();
+        string memory collection = "A";
+        vm.expectRevert("This pool does not exist");
+        pyramidCards.drawRandomCard(collection);
+        vm.stopPrank();
+    }
+
     // function testRandom() public {
     //     vm.startPrank(customer);
     //     pyramidCards.AddBalance{value: 1 ether}();
-    //     pyramidCards.drawRandomCard();
+    //     string memory collection = "A";
+    //     pyramidCards.drawRandomCard(collection);
     //     (uint256 i, address owner, uint256 amount) = pyramidCards.userCollection(customer, 0);
     //     console.log("id is: ", i);
     //     vm.stopPrank();
