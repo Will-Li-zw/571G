@@ -7,11 +7,9 @@ import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 contract PyramidCards is VRFConsumerBaseV2 {
 
     struct Card {
-        uint256 id;
-        address owner;
-        string collection;
-        uint256 amount; 
-        }
+        uint256 id;         // this id will be different for each card
+        uint256 quantity; 
+    }
 
     // ============================================== StateVariables ==============================================
     uint256 public constant PRICE = 0.001 ether;
@@ -20,10 +18,10 @@ contract PyramidCards is VRFConsumerBaseV2 {
     mapping(address => uint256) public userBalances;     // balance of each user
     mapping(address => Card[]) public userCollection;    // cards collection of each user
 
-    string[] public collections;   // Collection "A" -> id [1,2,3,4,5] id are fixed
-    mapping(string => string) public collectionAward;   // Collection "A" -> award value
+    mapping(string => uint256[]) public poolNameToIds;   // Collection "A" -> id [1,2,3,4,5] id are fixed
+    mapping(string => uint256[]) public poolNameToProbabilities; //     "A" -> pro[20,20,20,20,20]
+    mapping(string => Card[]) public collectionAward;   // TODO: "Fake award"
 
-    // Card[] public cardForSale;                           // cards for sale  # TODO: we may cancel the market setting of the project
 
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     // Variables for chainlink random number function:
@@ -74,18 +72,22 @@ contract PyramidCards is VRFConsumerBaseV2 {
     // User can use this to add balance to theirselves
     function AddBalance() external payable {
         require(msg.value > 0, "The sent balance must be greater than 0");
+        // TODO: change to draw chances;
         userBalances[msg.sender] += msg.value;
     }
-    
-    // User can withDraw the ether from their account
-    function withdraw() external {
-        uint256 balance = userBalances[msg.sender];
-        require(balance > 0, "No value can be withdrawn");
 
-        userBalances[msg.sender] = 0; 
-        (bool ok, ) = msg.sender.call{value: balance}("");
-        require(ok, "Failed to withdraw ether");
+    function redeemChance(uint256 id) external {
+
     }
+
+    function getUserCollection(address user) public view returns(uint256[] memory, uint256[] memory) {
+
+    }
+
+    function getUserBalances(address user) public view returns(uint256) {
+
+    }
+    
 
     // User can draw card given he/she has enough ether
     function drawRandomCard(string memory collection) external drawPriceEnough {
@@ -111,9 +113,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
         // user draw this card!
         userCollection[cardOwner].push(Card({
             id: cardId,
-            owner: cardOwner,
-            collection: collection,
-            amount: 1
+            quantity: 1
         }));
     }
 
@@ -139,23 +139,32 @@ contract PyramidCards is VRFConsumerBaseV2 {
         return i+1;
     }
 
-    // User want to exchange two cards for one draw chance
-    function exchangeForDraw(string memory collection, uint256 id) public {
+    // ============================================== Admin Functions ==============================================
+    // create a new collection of cards
+    function createCollections(string memory name, uint256[] memory ids, uint256[] memory probabilities) external isAdmin {
+        // create new card
+        // TODO: Set two mappings:
+
+        // poolNameToIds
+        // poolNameToProbabilities
+    }
+
+    function getCollections() public view  {
+
+    }
+
+    function getCollectionProbability() public view  {
+
+    }
+
+
+    // create a new collection of cards
+    function setCollectionAward(string memory awardName, uint256[] memory ids, uint256[] memory num) public isAdmin {
         
     }
 
-    // ============================================== Admin Functions ==============================================
-    // create a new collection of cards
-    function createCollections(string memory name) external isAdmin {
-        // create new card
-        // TODO: how to deal with images
+    function getCollectionAward(string memory awardName) public view {
 
-        // collectionCards[name] = 
-    }
-
-    // create a new collection of cards
-    function setCollectionAward(string memory name, string memory awardValue) external isAdmin {
-        collectionAward[name] = awardValue;
     }
 
 }
