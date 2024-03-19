@@ -22,7 +22,10 @@ import { Container, Typography, Button } from '@mui/material';
 import { useAppDispatch } from '../hooks';
 import { setRemainingDraws, setCollection } from '../store/userSlice';
 import { setCardImageMap } from '../store/cardImageMapSlice';
-import { fetchUserData, fetchCardImageMap } from '../store/mockBackend';
+
+import { fetchUserData, fetchCardImageMap, fetchPoolData, fetchRewardData } from '../store/mockBackend';
+import { setPoolProbMap } from '../store/poolProbMapSlice';
+import { setRewardMap } from '../store/rewardMapSlice';
 
 export function LoginPage() {
   const { activate, active } = useWeb3React();
@@ -56,6 +59,11 @@ export function LoginPage() {
 
       const cardImageMapData = await fetchCardImageMap();
       dispatch(setCardImageMap(cardImageMapData));
+      const poolData = await fetchPoolData();
+      dispatch(setPoolProbMap(poolData));
+  
+      const rewardData = await fetchRewardData();
+      dispatch(setRewardMap(rewardData));
 
     } catch (error) {
       console.error('Error on logging in:', error);

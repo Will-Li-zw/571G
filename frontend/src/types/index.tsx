@@ -1,7 +1,7 @@
 // src/types/index.ts
 export interface Card {
   id: number;
-  quantity: number; // Represents the number of this card that the user holds
+  quantity: number;
 }
 
 export interface UserState {
@@ -9,7 +9,14 @@ export interface UserState {
   collection: Card[];
 }
 
-// New type for mapping card IDs to image URLs
 export interface CardImageMap {
   [id: number]: string;
+}
+
+export interface PoolProbMap {
+  [poolName: string]: { id: number; prob: number }[];
+}
+
+export interface RewardMap {
+  [rewardName: string]: { id: number; quantity: number }[];
 }

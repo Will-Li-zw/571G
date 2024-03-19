@@ -1,72 +1,93 @@
-import React, { useState } from 'react';
-import { Grid, Card, CardContent, Button, Typography, CardMedia } from '@mui/material';
+import React from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+// import { Grid, Card as MuiCard, CardContent, Button, Typography, CardMedia } from '@mui/material';
+import { Grid, Card, CardActionArea, CardActions, CardContent, Button, Typography, CardMedia, Box } from '@mui/material';
+import { setCollection } from '../store/userSlice'; // Adjust the import path as necessary
+import { RootState } from '../store/store';
 
-// Function to get image URL based on card ID
-const imageUrls: { [key: number]: string } = {
-  11:'https://i.postimg.cc/3RXLFz5z/163111-1710059471b82d.jpg',
-  22:'https://i.postimg.cc/fR41mGPj/194048-1710070848523b.jpg',
-  33: 'https://i.postimg.cc/rFTPp1RQ/TEC3-L07-N0965-lead-720x1280.png',
-  44: 'https://via.placeholder.com/100/FFFACD',
-  55: 'https://via.placeholder.com/100/8A2BE2',
-  66: 'https://via.placeholder.com/100/DEB887',
-  // ... Add more mappings as needed
-};
-
-const getImageUrlForCardId = (cardId: number): string => {
-  return imageUrls[cardId] || 'https://via.placeholder.com/100/FFFFFF'; // Fallback image
-};
-
-
-// Mockup data for the store content
-const mockupStoreContent = [
-  {
-    id: 1,
-    requiredCardIds: [11, 22, 33],
-    content: 'Exclusive Set A',
-  },
-  {
-    id: 2,
-    requiredCardIds: [44, 55, 66],
-    content: 'Exclusive Set B',
-  },
-  // Add more awards as needed
-];
-
-// Function to simulate redeeming an award
-const redeemAward = (awardId:number) => {
-  console.log(`Redeeming award with ID: ${awardId}`);
-  // Placeholder for actual redeem logic or API call
-};
+export interface RewardMap {
+  [rewardName: string]: { id: number; quantity: number }[];
+}
 
 export const Store = () => {
-  const [storeContent] = useState(mockupStoreContent);
+  const dispatch = useDispatch();
+  const userCollection = useSelector((state: RootState) => state.user.collection);
+  const storeContent: RewardMap = useSelector((state: RootState) => state.reward);
+  const cardImage = useSelector((state: RootState) => state.cardImageMap);
+
+  const redeemAward = async (rewardName: string) => {
+    const awards = storeContent[rewardName];
+    if (!awards) return;
+
+    const canRedeem = awards.every(award => {
+      const userCard = userCollection.find(c => c.id === award.id);
+      return userCard && userCard.quantity >= award.quantity;
+    });
+
+    if (canRedeem) {
+      // Simulate an API call
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Mock API call delay
+
+      const updatedCollection = userCollection.map(userCard => {
+        const awardToRedeem = awards.find(a => a.id === userCard.id);
+        if (awardToRedeem) {
+          return { ...userCard, quantity: userCard.quantity - awardToRedeem.quantity };
+        }
+        return userCard;
+      });
+
+      dispatch(setCollection(updatedCollection));
+      alert('Award redeemed successfully!');
+    } else {
+      alert('Insufficient cards to redeem this award.');
+    }
+  };
+
+  // Function to get image URL by card ID (you'll need to implement this based on your own logic)
+  const getImageUrlForCardId = (cardId: number): string => {
+    // Replace with your actual image retrieval logic
+
+    return cardImage[cardId];
+  };
 
   return (
     <Grid container spacing={2} sx={{ padding: 2 }}>
-      {storeContent.map((award) => (
-        <Grid item key={award.id} xs={12} sm={6} lg={4}>
+      {Object.entries(storeContent).map(([rewardName, rewards]) => (
+        <Grid item xs={12} sm={6} lg={4} key={rewardName}>
           <Card raised sx={{ maxWidth: 345, mb: 2 }}>
             <CardContent>
               <Typography gutterBottom variant="h5" component="div">
-                {award.content}
+                {rewardName}
               </Typography>
-              {award.requiredCardIds.map((cardId) => (
-                <Card key={cardId} sx={{ mb: 1, display: 'inline-flex', width: 100, height: 140 }}>
-                  <CardMedia
-                    component="img"
-                    height="140"
-                    image={getImageUrlForCardId(cardId)}
-                    alt={`Card ${cardId}`}
-                  />
-                </Card>
-              ))}
-              <Button variant="outlined" color="primary" onClick={() => redeemAward(award.id)} sx={{ mt: 1 }}>
-                Redeem
-              </Button>
             </CardContent>
+            {rewards.map((reward) => (
+              <CardActionArea key={reward.id}>
+                <CardMedia
+                  component="img"
+                  image={getImageUrlForCardId(reward.id)}
+                  alt={`Card ${reward.id}`}
+                  sx={{ height: 140, objectFit: 'contain' }} // Adjust as necessary
+                />
+                <CardContent>
+                  <Typography variant="body2" color="text.secondary">
+                    Quantity: {reward.quantity}
+                  </Typography>
+                </CardContent>
+              </CardActionArea>
+            ))}
+            <CardActions>
+              <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                <Button variant="contained" color="primary" onClick={() => redeemAward(rewardName)}>
+                  Redeem
+                </Button>
+              </Box>
+            </CardActions>
           </Card>
         </Grid>
       ))}
     </Grid>
   );
+  
 };
+
+export default Store;
