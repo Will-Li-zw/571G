@@ -16,7 +16,7 @@ contract PyramidCardsTest is Test {
     VRFCoordinatorV2Mock public vrfCoordinatorMock;
 
     address customer = address(1); // fake user
-    uint256 constant PRICE = 1.5 ether; // test ether
+    uint256 constant PRICE = 0.001 ether; // test ether
 
     uint96 constant BASE_FEE = 25000000000000000000; // 25e^18
     uint96 constant GAS_PRICE_LINK = 1e9;  
@@ -47,13 +47,32 @@ contract PyramidCardsTest is Test {
 
     // test 1 -- test addbalance
     function testAddBalance() public {
-        vm.startPrank(customer);
-        pyramidCards.addBalance{value: 1 ether}();
-        uint256 balance = pyramidCards.userBalances(customer);
-        assertEq(balance, 1 ether);
+        uint256 initialBalance = pyramidCards.getUserBalances(customer);
+        uint16 unit = 3;
+        uint256 amount = PRICE * unit;
+        
+        vm.prank(customer); 
+        pyramidCards.addBalance{value: amount}();
+        
+        uint256 newBalance = pyramidCards.getUserBalances(customer);
+        assertEq(newBalance, initialBalance + unit, "Balance should increase by the sent amount / PRICE");
+        
         vm.stopPrank();
     }
 
+    function testAddBalanceFailWithZeroAmount() public {
+        vm.prank(customer); 
+        vm.expectRevert("The sent balance must be greater than 0"); 
+        pyramidCards.addBalance{value: 0}();
+        vm.stopPrank();
+    }
+
+    function testAddBalanceFailWithNonMultipleOfPrice() public {
+        uint256 nonMultipleAmount = 0.0015 ether; // An amount that is not a multiple of PRICE
+        vm.prank(customer); 
+        vm.expectRevert("The sent balance must be multiple of unit price"); 
+        pyramidCards.addBalance{value: nonMultipleAmount}();
+    }
     // function testRandom() public {
     //     vm.startPrank(customer);
     //     pyramidCards.AddBalance{value: 1 ether}();
