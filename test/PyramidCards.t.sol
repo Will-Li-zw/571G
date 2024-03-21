@@ -123,6 +123,30 @@ contract PyramidCardsTest is Test {
         pyramidCards.redeemChance(cardIdToRedeem);
         vm.stopPrank();
     }
+
+    function testGetUserCollection() public {
+        // Setup: Mint two kinds of cards to the customer
+        uint256 cardId1 = 1;
+        uint256 quantity1 = 3; 
+        pyramidCards.testMintCard(customer, cardId1, quantity1);
+
+        uint256 cardId2 = 2;
+        uint256 quantity2 = 5; 
+        pyramidCards.testMintCard(customer, cardId2, quantity2);
+
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+
+        // Check that the returned data is correct
+        for (uint i = 0; i < ids.length; i++) {
+            if (ids[i] == cardId1) {
+                assertEq(quantities[i], quantity1, "Quantity of card 1 does not match");
+            }
+            if (ids[i] == cardId2) {
+                assertEq(quantities[i], quantity2, "Quantity of card 2 does not match");
+            }
+        }
+
+    }
     // function testRandom() public {
     //     vm.startPrank(customer);
     //     pyramidCards.AddBalance{value: 1 ether}();
