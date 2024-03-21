@@ -16,8 +16,8 @@ contract PyramidCardsTest is Test {
     VRFCoordinatorV2Mock public vrfCoordinatorMock;
 
     address customer = address(1); // fake user
+    uint256 constant PRICE = 0.001 ether; // test ether
     address admin = address(2); // fake admin
-    uint256 constant PRICE = 1.5 ether; // test ether
 
     uint96 constant BASE_FEE = 1e17; // 25e^18      base_cost per each request
     uint96 constant GAS_PRICE_LINK = 1e9;  
@@ -68,12 +68,115 @@ contract PyramidCardsTest is Test {
 
     // test 1 -- test addbalance
     function testAddBalance() public {
-        vm.startPrank(customer);
-        pyramidCards.AddBalance{value: 1 ether}();
-        uint256 balance = pyramidCards.userBalances(customer);
-        assertEq(balance, 1 ether);
+        uint256 initialBalance = pyramidCards.getUserBalances(customer);
+        uint16 unit = 3;
+        uint256 amount = PRICE * unit;
+        
+        vm.prank(customer); 
+        pyramidCards.addBalance{value: amount}();
+        
+        uint256 newBalance = pyramidCards.getUserBalances(customer);
+        assertEq(newBalance, initialBalance + unit, "Balance should increase by the sent amount / PRICE");
+        
         vm.stopPrank();
     }
+
+    function testAddBalanceFailWithZeroAmount() public {
+        vm.prank(customer); 
+        vm.expectRevert("The sent balance must be greater than 0"); 
+        pyramidCards.addBalance{value: 0}();
+        vm.stopPrank();
+    }
+
+    function testAddBalanceFailWithNonMultipleOfPrice() public {
+        uint256 nonMultipleAmount = 0.0015 ether; // An amount that is not a multiple of PRICE
+        vm.prank(customer); 
+        vm.expectRevert("The sent balance must be multiple of unit price"); 
+        pyramidCards.addBalance{value: nonMultipleAmount}();
+    }
+
+    function testRedeemChance() public {
+        uint256 cardIdToRedeem = 1;
+        uint256 NUMS_EXCHANGE_CHANCE = 4; // Assuming this is a constant in your contract
+
+        // Mint cards to the customer, test both consume all of the chosen cards or not
+        pyramidCards.testMintCard(customer, cardIdToRedeem, NUMS_EXCHANGE_CHANCE);
+        pyramidCards.testMintCard(customer, cardIdToRedeem + 1, NUMS_EXCHANGE_CHANCE + 1);
+        
+        // Check the balance has increased as expected
+        uint256 initialChances = pyramidCards.getUserBalances(customer);
+        vm.startPrank(customer);
+        pyramidCards.redeemChance(cardIdToRedeem);
+        pyramidCards.redeemChance(cardIdToRedeem + 1);
+
+        uint256 newChances = pyramidCards.getUserBalances(customer);
+        assertEq(newChances, initialChances + 2, "Chances should increase by 1 after redeeming");
+
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+        bool firstCardFound = false;
+
+        for (uint i = 0; i < ids.length; i++) {
+            if (ids[i] == cardIdToRedeem + 1) {
+                //the second card should still be in the collection with quantity 1
+                assertEq(quantities[i], 1, "Card quantity should decrease by NUMS_EXCHANGE_CHANCE");
+            }
+            if (ids[i] == cardIdToRedeem) {
+                firstCardFound = true;
+                break;
+            }
+        }
+        //the first card should not be in the collection
+        assertFalse(firstCardFound, "Card shouldn't be in the user's collection"); 
+        vm.stopPrank();
+    }
+
+
+    function testRedeemChanceRevertInsufficientCards() public {
+        uint256 cardIdToRedeem = 1;
+        uint256 NUMS_EXCHANGE_CHANCE = 4; // Assuming this is a constant in your contract
+        uint256 insufficientQuantity = NUMS_EXCHANGE_CHANCE - 1; // Not enough cards to redeem
+
+        // Mint fewer cards than needed for redemption
+        pyramidCards.testMintCard(customer, cardIdToRedeem, insufficientQuantity);
+
+        // Expect the transaction to revert
+        vm.startPrank(customer);
+        vm.expectRevert("Not enough cards to redeem chance");
+        pyramidCards.redeemChance(cardIdToRedeem);
+        vm.stopPrank();
+    }
+
+    function testGetUserCollection() public {
+        // Setup: Mint two kinds of cards to the customer
+        uint256 cardId1 = 1;
+        uint256 quantity1 = 3; 
+        pyramidCards.testMintCard(customer, cardId1, quantity1);
+
+        uint256 cardId2 = 2;
+        uint256 quantity2 = 5; 
+        pyramidCards.testMintCard(customer, cardId2, quantity2);
+
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+
+        // Check that the returned data is correct
+        for (uint i = 0; i < ids.length; i++) {
+            if (ids[i] == cardId1) {
+                assertEq(quantities[i], quantity1, "Quantity of card 1 does not match");
+            }
+            if (ids[i] == cardId2) {
+                assertEq(quantities[i], quantity2, "Quantity of card 2 does not match");
+            }
+        }
+
+    }
+    // function testRandom() public {
+    //     vm.startPrank(customer);
+    //     pyramidCards.AddBalance{value: 1 ether}();
+    //     pyramidCards.drawRandomCard();
+    //     (uint256 i, address owner, uint256 amount) = pyramidCards.userCollection(customer, 0);
+    //     console.log("id is: ", i);
+    //     vm.stopPrank();
+    // }
 
     // User should not be able to draw a pool that does not exist.
     function testRandom() public {
@@ -141,6 +244,5 @@ contract PyramidCardsTest is Test {
         // assertEq(amount, 1);
         // vm.stopPrank();
     }
-
 
 }
