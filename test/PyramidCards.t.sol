@@ -27,8 +27,8 @@ contract PyramidCardsTest is Test {
     bytes32 constant gasLane = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
 
     string constant collection = "A";
-    uint256[] ids = new uint256[](5);
-    uint256[] prob = new uint256[](5);
+    // uint256[] ids = new uint256[](5);
+    // uint256[] prob = new uint256[](5);
 
     event CardDraw(address indexed owner, uint256 id);
 
@@ -52,17 +52,17 @@ contract PyramidCardsTest is Test {
         vm.deal(customer, 10 ether);    // original balance of user
 
         // setup the ids and probs
-        ids[0] = 1;
-        ids[1] = 2;
-        ids[2] = 3;
-        ids[3] = 4;
-        ids[4] = 5;
-        // ids = [uint256(1), 2, 3, 4, 5];
-        prob[0] = 10;
-        prob[1] = 10;
-        prob[2] = 10;
-        prob[3] = 35;
-        prob[4] = 35;
+        // ids[0] = 1;
+        // ids[1] = 2;
+        // ids[2] = 3;
+        // ids[3] = 4;
+        // ids[4] = 5;
+        // // ids = [uint256(1), 2, 3, 4, 5];
+        // prob[0] = 10;
+        // prob[1] = 10;
+        // prob[2] = 10;
+        // prob[3] = 35;
+        // prob[4] = 35;
         vm.stopPrank();
     }
 
@@ -100,8 +100,10 @@ contract PyramidCardsTest is Test {
         uint256 NUMS_EXCHANGE_CHANCE = 4; // Assuming this is a constant in your contract
 
         // Mint cards to the customer, test both consume all of the chosen cards or not
+        vm.startPrank(admin);
         pyramidCards.testMintCard(customer, cardIdToRedeem, NUMS_EXCHANGE_CHANCE);
         pyramidCards.testMintCard(customer, cardIdToRedeem + 1, NUMS_EXCHANGE_CHANCE + 1);
+        vm.stopPrank();
         
         // Check the balance has increased as expected
         uint256 initialChances = pyramidCards.getUserBalances(customer);
@@ -137,6 +139,7 @@ contract PyramidCardsTest is Test {
         uint256 insufficientQuantity = NUMS_EXCHANGE_CHANCE - 1; // Not enough cards to redeem
 
         // Mint fewer cards than needed for redemption
+        vm.prank(admin);
         pyramidCards.testMintCard(customer, cardIdToRedeem, insufficientQuantity);
 
         // Expect the transaction to revert
@@ -150,10 +153,12 @@ contract PyramidCardsTest is Test {
         // Setup: Mint two kinds of cards to the customer
         uint256 cardId1 = 1;
         uint256 quantity1 = 3; 
+        vm.prank(admin);
         pyramidCards.testMintCard(customer, cardId1, quantity1);
 
         uint256 cardId2 = 2;
         uint256 quantity2 = 5; 
+        vm.prank(admin);
         pyramidCards.testMintCard(customer, cardId2, quantity2);
 
         (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
@@ -181,7 +186,7 @@ contract PyramidCardsTest is Test {
     // User should not be able to draw a pool that does not exist.
     function testRandom() public {
         vm.startPrank(customer);
-        pyramidCards.AddBalance{value: 1 ether}();
+        pyramidCards.addBalance{value: 1 ether}();
         vm.expectRevert("This pool does not exist");
         pyramidCards.drawRandomCard(collection);
         vm.stopPrank();
