@@ -34,8 +34,8 @@ contract PyramidCards is VRFConsumerBaseV2 {
 
     uint256 private constant MAX_CHANCE_VALUE = 100;
     // record mapping
-    mapping(uint256 => address) s_requestIdToSender;
-    mapping(uint256 => string) s_requestIdToCollection;
+    mapping(uint256 => address) public s_requestIdToSender;
+    mapping(uint256 => string) public s_requestIdToCollection;
 
     // ============================================== Modifiers ==============================================
     modifier isAdmin(){
@@ -51,7 +51,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
     // ============================================== Events ==============================================
     event CardListed(uint256 id, address owner, uint256 price);
     event CardDelisted(uint256 id);
-    event CardBought(uint256 id, address from, address to, uint256 price);
+    event CardDraw(address indexed owner, uint256 id);
 
 
     // ============================================== User Functions ==============================================
@@ -112,7 +112,9 @@ contract PyramidCards is VRFConsumerBaseV2 {
         string memory collection = s_requestIdToCollection[requestId];
         uint256 rng = randomWords[0] % MAX_CHANCE_VALUE;
         uint256 cardIndex = getCardIdFromRng(rng, collection);
+        console.log("Random card index is: ", cardIndex);
         uint256 cardId = poolNameToIds[collection][cardIndex];
+        console.log("Random card id is: ", cardId);
 
         // user draw this card!
         // if this card already be possessed?
@@ -129,6 +131,9 @@ contract PyramidCards is VRFConsumerBaseV2 {
             id: cardId,
             quantity: 1
         }));
+
+        // emit the event of drawed card
+        emit CardDraw(cardOwner, cardId);
     }
 
     // chance array
