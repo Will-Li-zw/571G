@@ -17,9 +17,13 @@ export const rewardMapSlice = createSlice({
     setRewardMap: (state, action: PayloadAction<RewardMap>) => {
       return action.payload;
     },
+    addOrUpdateReward: (state, action: PayloadAction<{ rewardName: string; rewards: { id: number; quantity: number }[] }>) => {
+      const { rewardName, rewards } = action.payload;
+      state[rewardName] = rewards;
+    },
     
   },
 });
 
-export const { setRewardMap } = rewardMapSlice.actions;
+export const { setRewardMap, addOrUpdateReward } = rewardMapSlice.actions;
 export default rewardMapSlice.reducer;
