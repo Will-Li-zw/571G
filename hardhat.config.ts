@@ -24,11 +24,11 @@ const config: HardhatUserConfig = {
         interval: 1000
       }
     },
-    ropsten: {
-      url: process.env.ROPSTEN_URL || '',
+    sepolia: {
+      url: process.env.SEPOLIA_API_URL || '',
       accounts:
-        process.env.TEST_ETH_ACCOUNT_PRIVATE_KEY !== undefined
-          ? [process.env.TEST_ETH_ACCOUNT_PRIVATE_KEY]
+        process.env.SEPOLIA_PRIVATE_KEY !== undefined
+          ? [process.env.SEPOLIA_PRIVATE_KEY]
           : []
     }
   },
