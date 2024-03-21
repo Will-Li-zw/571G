@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import "hardhat/console.sol";
 
 contract PyramidCards is VRFConsumerBaseV2 {
 
@@ -33,8 +34,8 @@ contract PyramidCards is VRFConsumerBaseV2 {
 
     uint256 private constant MAX_CHANCE_VALUE = 100;
     // record mapping
-    mapping(uint256 => address) s_requestIdToSender;
-    mapping(uint256 => string) s_requestIdToCollection;
+    mapping(uint256 => address) public s_requestIdToSender;
+    mapping(uint256 => string) public s_requestIdToCollection;
 
     // number of cards to redeem for new chance
     uint16 private constant NUMS_EXCHANGE_CHANCE = 4;
@@ -53,7 +54,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
     // ============================================== Events ==============================================
     event CardListed(uint256 id, address owner, uint256 price);
     event CardDelisted(uint256 id);
-    event CardBought(uint256 id, address from, address to, uint256 price);
+    event CardDraw(address indexed owner, uint256 id);
 
 
     // ============================================== User Functions ==============================================
@@ -156,8 +157,9 @@ contract PyramidCards is VRFConsumerBaseV2 {
     
 
     // User can draw card given he/she has enough ether
-    function drawRandomCard(string memory collection) external drawPriceEnough {
+    function drawRandomCard(string memory collection) external drawPriceEnough returns(uint256){
         // Random function of chainlink:
+        require(poolNameToIds[collection].length != 0, "This pool does not exist");
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane,
             i_subscriptionId,
@@ -168,33 +170,57 @@ contract PyramidCards is VRFConsumerBaseV2 {
 
         s_requestIdToSender[requestId] = msg.sender;    // record requestId to address
         s_requestIdToCollection[requestId] = collection;    // record requestId to collection we want to draw
+        return requestId;
     }
 
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
         address cardOwner = s_requestIdToSender[requestId];
-        uint256 rng = randomWords[0] % MAX_CHANCE_VALUE;
-        uint256 cardId = getCardIdFromRng(rng); // cardId from 1 to 5
         string memory collection = s_requestIdToCollection[requestId];
+        uint256 rng = randomWords[0] % MAX_CHANCE_VALUE;
+        uint256 cardIndex = getCardIdFromRng(rng, collection);
+        console.log("Random card index is: ", cardIndex);
+        uint256 cardId = poolNameToIds[collection][cardIndex];
+        console.log("Random card id is: ", cardId);
 
         // user draw this card!
+        // if this card already be possessed?
+        Card[] memory cards = userCollection[cardOwner];
+        console.log("User currently has: ", cards.length);
+        for (uint256 i = 0; i < cards.length; i++){
+            if (cards[i].id == cardId){
+                cards[i].quantity += 1;
+                return;
+            }
+        }
+        // otherwise: this is a new card
         userCollection[cardOwner].push(Card({
             id: cardId,
             quantity: 1
         }));
+
+        // emit the event of drawed card
+        emit CardDraw(cardOwner, cardId);
     }
 
     // chance array
-    function getChanceArray() public pure returns(uint256[5] memory) {
+    function getChanceArray(string memory collection) public view returns(uint256[] memory) {
         // 0 - 24, 25 - 49, 50 - 74: 1,2,3
         // 75 - 89: 4
         // 90 - 99: 5
-        return [25, 50, 75, 90, MAX_CHANCE_VALUE];
+        uint256[] memory probability = poolNameToProbabilities[collection];
+        uint256[] memory chanceArray = new uint256[](probability.length);
+        uint sum = 0;
+        for(uint256 i = 0; i < probability.length; i++){
+            sum = sum + probability[i];
+            chanceArray[i] = sum;
+        }
+        return chanceArray;
     }
 
     // get cardId from the chance array and rng
-    function getCardIdFromRng(uint256 rng) private pure returns(uint256) {
+    function getCardIdFromRng(uint256 rng, string memory collection) private view returns(uint256) {
         uint256 cumulativeSum = 0;
-        uint256[5] memory chanceArray = getChanceArray();
+        uint256[] memory chanceArray = getChanceArray(collection);
         uint256 i;
         for(i = 0; i < chanceArray.length; i++) {
             if(rng >= cumulativeSum && rng < cumulativeSum + chanceArray[i]) {
@@ -202,7 +228,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
             }
             cumulativeSum = cumulativeSum + chanceArray[i];
         }
-        return i+1;
+        return i;
     }
 
     // ============================================== Admin Functions ==============================================
@@ -219,7 +245,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
 
     }
 
-    function getCollectionProbability() public view  {
+    function getCollectionProbability(string memory collection) public view returns(uint256[] memory) {
 
     }
 
