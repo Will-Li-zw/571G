@@ -81,6 +81,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
         userBalances[msg.sender] += msg.value / PRICE;
     }
 
+    //dismantle cards to redeem chance
     function redeemChance(uint256 id) external {
         bool cardFound = false;
         // Find the card in the user's collection and check the quantity
@@ -117,6 +118,25 @@ contract PyramidCards is VRFConsumerBaseV2 {
         userCollection[user].pop();
     }
 
+    // Admin function to add cards for testing
+    function testMintCard(address user, uint256 cardId, uint256 quantity) public isAdmin {
+        bool cardExists = false;
+
+        // Check if the user already has the card
+        for (uint i = 0; i < userCollection[user].length; i++) {
+            if (userCollection[user][i].id == cardId) {
+                userCollection[user][i].quantity += quantity; // Increase the quantity
+                cardExists = true;
+                break;
+            }
+        }
+
+        // If the card does not exist, add a new card to the collection
+        if (!cardExists) {
+            userCollection[user].push(Card(cardId, quantity));
+        }
+    }
+    
     function getUserCollection(address user) public view returns(uint256[] memory, uint256[] memory) {
         uint256[] memory ids = new uint256[](userCollection[user].length);
         uint256[] memory quantities = new uint256[](userCollection[user].length);
@@ -196,7 +216,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
     }
 
     function getCollections() public view  {
-        
+
     }
 
     function getCollectionProbability() public view  {

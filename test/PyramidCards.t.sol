@@ -73,6 +73,56 @@ contract PyramidCardsTest is Test {
         vm.expectRevert("The sent balance must be multiple of unit price"); 
         pyramidCards.addBalance{value: nonMultipleAmount}();
     }
+
+    function testRedeemChance() public {
+        uint256 cardIdToRedeem = 1;
+        uint256 NUMS_EXCHANGE_CHANCE = 4; // Assuming this is a constant in your contract
+
+        // Mint cards to the customer, test both consume all of the chosen cards or not
+        pyramidCards.testMintCard(customer, cardIdToRedeem, NUMS_EXCHANGE_CHANCE);
+        pyramidCards.testMintCard(customer, cardIdToRedeem + 1, NUMS_EXCHANGE_CHANCE + 1);
+        
+        // Check the balance has increased as expected
+        uint256 initialChances = pyramidCards.getUserBalances(customer);
+        vm.startPrank(customer);
+        pyramidCards.redeemChance(cardIdToRedeem);
+        pyramidCards.redeemChance(cardIdToRedeem + 1);
+
+        uint256 newChances = pyramidCards.getUserBalances(customer);
+        assertEq(newChances, initialChances + 2, "Chances should increase by 1 after redeeming");
+
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+        bool firstCardFound = false;
+
+        for (uint i = 0; i < ids.length; i++) {
+            if (ids[i] == cardIdToRedeem + 1) {
+                //the second card should still be in the collection with quantity 1
+                assertEq(quantities[i], 1, "Card quantity should decrease by NUMS_EXCHANGE_CHANCE");
+            }
+            if (ids[i] == cardIdToRedeem) {
+                firstCardFound = true;
+                break;
+            }
+        }
+        //the first card should not be in the collection
+        assertFalse(firstCardFound, "Card shouldn't be in the user's collection"); 
+        vm.stopPrank();
+    }
+
+    function testRedeemChanceRevertInsufficientCards() public {
+        uint256 cardIdToRedeem = 1;
+        uint256 NUMS_EXCHANGE_CHANCE = 4; // Assuming this is a constant in your contract
+        uint256 insufficientQuantity = NUMS_EXCHANGE_CHANCE - 1; // Not enough cards to redeem
+
+        // Mint fewer cards than needed for redemption
+        pyramidCards.testMintCard(customer, cardIdToRedeem, insufficientQuantity);
+
+        // Expect the transaction to revert
+        vm.startPrank(customer);
+        vm.expectRevert("Not enough cards to redeem chance");
+        pyramidCards.redeemChance(cardIdToRedeem);
+        vm.stopPrank();
+    }
     // function testRandom() public {
     //     vm.startPrank(customer);
     //     pyramidCards.AddBalance{value: 1 ether}();
