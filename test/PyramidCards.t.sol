@@ -118,7 +118,10 @@ contract PyramidCardsTest is Test {
         vm.startPrank(admin);
         pyramidCards.testMintCard(customer, cardIdToRedeem, NUMS_EXCHANGE_CHANCE);
         pyramidCards.testMintCard(customer, cardIdToRedeem + 1, NUMS_EXCHANGE_CHANCE + 1);
-        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+        vm.stopPrank();
+
+        vm.startPrank(customer);
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection();
         bool card1Found;
         bool card2Found;
         for (uint i = 0; i < ids.length; i++) {
@@ -128,13 +131,12 @@ contract PyramidCardsTest is Test {
                 card1Found = true;
             }
             if (ids[i] == cardIdToRedeem + 1) {
-                assertEq(quantities[i], NUMS_EXCHANGE_CHANCE+1, "Card quantity should be 5");
+                assertEq(quantities[i], NUMS_EXCHANGE_CHANCE + 1, "Card quantity should be 5");
                 card2Found = true;
             }
         }
         assertEq(card1Found, true, "card 1 does not exist");
         assertEq(card2Found, true, "card 2 does not exist");
-        vm.stopPrank();
         
         uint256 initialChances = pyramidCards.getUserBalances(customer);
         vm.startPrank(customer);
@@ -143,12 +145,14 @@ contract PyramidCardsTest is Test {
         uint256 newChances = pyramidCards.getUserBalances(customer);
         assertEq(newChances, initialChances + 2, "Chances should increase by 2 after redeeming");   // because we redeem twice
 
-        (ids, quantities) = pyramidCards.getUserCollection(customer);
+        (ids, quantities) = pyramidCards.getUserCollection();
         bool firstCardFound = false;
+        bool secondCardFound = false;
         for (uint i = 0; i < ids.length; i++) {
             if (ids[i] == cardIdToRedeem + 1) {
                 //the second card should still be in the collection with quantity 1
                 assertEq(quantities[i], 1, "Card quantity should decrease by NUMS_EXCHANGE_CHANCE");
+                secondCardFound = true;
             }
             if (ids[i] == cardIdToRedeem) {
                 firstCardFound = true;
@@ -156,7 +160,8 @@ contract PyramidCardsTest is Test {
             }
         }
         //the first card should not be in the collection
-        assertFalse(firstCardFound, "Card shouldn't be in the user's collection"); 
+        assertFalse(firstCardFound, "First Card shouldn't be in the user's collection"); 
+        assertTrue(secondCardFound, "Second Card should still have 1 quantity left");
         vm.stopPrank();
     }
 
@@ -193,7 +198,8 @@ contract PyramidCardsTest is Test {
         vm.prank(admin);
         pyramidCards.testMintCard(customer, cardId2, quantity2);
 
-        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+        vm.startPrank(customer);
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection();
 
         // Check that the returned data is correct
         bool card1Found = false;
@@ -210,6 +216,7 @@ contract PyramidCardsTest is Test {
         }
         assertEq(card1Found, true, "card 1 does not exist");
         assertEq(card2Found, true, "card 2 does not exist");
+        vm.stopPrank();
     }
 
     // ============================================== Admin Function Test ==============================================
@@ -425,15 +432,41 @@ contract PyramidCardsTest is Test {
     /** 
      * Test 10: Only admin can monitor user's card information (collection name, ID, and quantity)
      */
-    function testGetUserCardCollectionsInvalid() public {
+    function testGetUserCardCollections() public {
         // If user is not admin (expect to have error)
         vm.startPrank(customer);
         vm.expectRevert("You are not the admin, access denied");
         pyramidCards.getUserCardCollections(customer);
         vm.stopPrank();
-    }
-        // TODO: If user is admin (*** MESSAGE FOR TEAM: TBD, THIS TEST CASE REQIURES USERS TO DRAW CERTAIN AMOUNT OF CARDS ***
 
+        vm.startPrank(admin);
+        pyramidCards.createCollections(collectionTestName, validProbabilities);
+        vm.stopPrank();
+
+        // Draw a card for test
+        vm.startPrank(customer);
+        pyramidCards.addBalance{value: PRICE}();
+        uint256 requestId = pyramidCards.drawRandomCard(collectionTestName);
+        vrfCoordinatorMock.fulfillRandomWords(requestId, address(pyramidCards));    // NOTE: the random seed is set by requestId, which is always 1 in this case
+                                                                                    // So the returned random word is always the same
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection();
+        assertEq(ids.length, 1, "Only one card should be drawn");
+        assertEq(ids[0], 2, "Drawn card will have id 2 in this specific case");
+        assertEq(quantities[0], 1, "We only draw one card, but non-1 value received");
+        vm.stopPrank();
+
+        // use admin to check the user collection
+        vm.startPrank(admin);
+        (string[] memory collectionName, uint256[] memory id, uint256[] memory cardQuantities) = pyramidCards.getUserCardCollections(customer);
+        assertEq(collectionName.length, 1, "Only one card should be in user's collection");
+        assertEq(id.length, 1, "Only one card should be in user's collection");
+        assertEq(cardQuantities.length, 1, "Only one card should be in user's collection");
+        assertEq(collectionName[0], collectionTestName, "collection name mismatch");
+        assertEq(id[0], 2, "Card id mismatch");
+        assertEq(cardQuantities[0], 1, "Only one card of id 2 should be drawn");
+
+    }
+    
 
     // ============================================== Draw Card VRF Function Test ==============================================
     /** 
@@ -482,7 +515,7 @@ contract PyramidCardsTest is Test {
         emit CardDraw(address(customer), 2);
         vrfCoordinatorMock.fulfillRandomWords(requestId, address(pyramidCards));    // NOTE: the random seed is set by requestId, which is always 1 in this case
                                                                                     // So the returned random word is always the same
-        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection();
         assertEq(ids.length, 1, "Only one card should be drawn");
         assertEq(ids[0], 2, "Drawn card will have id 2 in this specific case");
         assertEq(quantities[0], 1, "We only draw one card, but non-1 value received");
@@ -540,7 +573,7 @@ contract PyramidCardsTest is Test {
         // Final check: 
         // id2 card: 4 times
         // id3 card: 1 time
-        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection();
         bool id2Found = false;
         bool id3Found = false;
         for (uint i = 0; i < ids.length; i++){
