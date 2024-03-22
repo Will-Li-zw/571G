@@ -7,9 +7,11 @@ import { RootState } from '../store/store';
 const AccountInformation = () => {
   const { remainingDraws, collection } = useSelector((state: RootState) => state.user);
   const cardImageMap = useSelector((state: RootState) => state.cardImageMap);
+  const account = useSelector((state: RootState) => state.user.address);
+
   
   console.log(remainingDraws)
-  if (remainingDraws === null || collection === null) {
+  if (account === null || collection === null) {
     return <CircularProgress />;
   }
 

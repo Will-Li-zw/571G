@@ -19,8 +19,8 @@ import { useEffect } from 'react';
 import { useWeb3React } from '@web3-react/core';
 import { injected } from '../utils/connectors';
 import { Container, Typography, Button } from '@mui/material';
-import { useAppDispatch } from '../hooks';
-import { setRemainingDraws, setCollection } from '../store/userSlice';
+import { useAppDispatch } from '../hooks'; 
+import { setRemainingDraws, setCollection, setAddress } from '../store/userSlice';
 import { setCardImageMap } from '../store/cardImageMapSlice';
 
 import { fetchUserData, fetchCardImageMap, fetchPoolData, fetchRewardData } from '../store/mockBackend';
@@ -28,42 +28,44 @@ import { setPoolProbMap } from '../store/poolProbMapSlice';
 import { setRewardMap } from '../store/rewardMapSlice';
 
 export function LoginPage() {
-  const { activate, active } = useWeb3React();
+  const { activate, active, account } = useWeb3React();
   const dispatch = useAppDispatch();
 
-  useEffect(() => {
-    console.log(`User active status: ${active}`); // For debugging
-    if (active) {
-      console.log('Fetching user data...'); // For debugging
-      (async () => {
-        try {
-          const userData = await fetchUserData();
-          dispatch(setRemainingDraws(userData.remainingDraws));
-          dispatch(setCollection(userData.collection));
+  // useEffect(() => {
+  //   console.log(`User active status: ${active}`); // For debugging
+  //   if (active) {
+  //     console.log('Fetching user data...'); // For debugging
+  //     (async () => {
+  //       try {
+  //         console.log(account)
+  //         dispatch(setAddress(account?account:""))
 
-          const cardImageMapData = await fetchCardImageMap();
-          dispatch(setCardImageMap(cardImageMapData));
-        } catch (error) {
-          console.error('Error fetching data:', error);
-        }
-      })();
-    }
-  }, [active, dispatch]);
+  //         const userData = await fetchUserData();
+  //         dispatch(setRemainingDraws(userData.remainingDraws));
+  //         dispatch(setCollection(userData.collection));
+
+  //         const cardImageMapData = await fetchCardImageMap();
+  //         dispatch(setCardImageMap(cardImageMapData));
+  //       } catch (error) {
+  //         console.error('Error fetching data:', error);
+  //       }
+  //     })();
+  //   }
+  // }, [active, dispatch]);
 
   const handleLoginClick = async () => {
     try {
       await activate(injected);
-      const userData = await fetchUserData();
-      dispatch(setRemainingDraws(userData.remainingDraws));
-      dispatch(setCollection(userData.collection));
-
-      const cardImageMapData = await fetchCardImageMap();
-      dispatch(setCardImageMap(cardImageMapData));
-      const poolData = await fetchPoolData();
-      dispatch(setPoolProbMap(poolData));
+      // const userData = await fetchUserData();
+      // dispatch(setRemainingDraws(userData.remainingDraws));
+      // dispatch(setCollection(userData.collection));
+      // const cardImageMapData = await fetchCardImageMap();
+      // dispatch(setCardImageMap(cardImageMapData));
+      // const poolData = await fetchPoolData();
+      // dispatch(setPoolProbMap(poolData));
   
-      const rewardData = await fetchRewardData();
-      dispatch(setRewardMap(rewardData));
+      // const rewardData = await fetchRewardData();
+      // dispatch(setRewardMap(rewardData));
 
     } catch (error) {
       console.error('Error on logging in:', error);

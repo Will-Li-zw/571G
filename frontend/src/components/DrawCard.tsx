@@ -8,15 +8,18 @@ import { Box, Button, Card, CardContent, Typography, CardMedia, Select, MenuItem
 import { setRemainingDraws, setCollection } from '../store/userSlice';
 // Import the RootState type from your store for TypeScript typing of state
 import { RootState } from '../store/store';
-
+import { addBalanceToContract, getBalance ,getUserCollection } from '../store/interact';
+import Web3 from 'web3';
 // Define the DrawCard component
 export const DrawCard = () => {
+  const web3 = new Web3("wss://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");;
   const dispatch = useDispatch();
   // Use useSelector to access necessary pieces of the Redux state
   const pools = useSelector((state: RootState) => state.pool);
   const remainingDraws = useSelector((state: RootState) => state.user.remainingDraws);
   const userCollection = useSelector((state: RootState) => state.user.collection);
   const cardImageMap = useSelector((state: RootState) => state.cardImageMap);
+  const account = useSelector((state: RootState) => state.user.address);
 
   // Define component state
   const [selectedPool, setSelectedPool] = useState('');
@@ -82,11 +85,44 @@ export const DrawCard = () => {
   };
 
   // Function to handle the purchase of additional draws
-  const handleBuyDraws = () => {
+  const handleBuyDraws = async () => {
     const amount = parseInt(buyAmount, 10) || 0;
-    dispatch(setRemainingDraws(remainingDraws + amount));
-    setBuyAmount(''); // Reset the input field
+    
+    // This call returns a transaction hash.
+    const txHash = await addBalanceToContract(account, (amount * 0.001).toString());
+    console.log(`Transaction Hash: ${txHash}`);
+  
+    // Wait for the transaction to be mined
+    const receipt = await waitForTransactionReceipt(txHash);
+  
+    if (receipt && receipt.status) {
+      // Transaction was successful, update the balance
+      alert('Transaction confirmed');
+      dispatch(setRemainingDraws(remainingDraws + amount));
+    } else {
+      // Handle transaction failure
+      alert('Transaction failed or was not confirmed.');
+    }
+  
+    // Reset the input field regardless of transaction success
+    setBuyAmount('');
   };
+  
+  // Utility function to wait for a transaction to be mined
+  const waitForTransactionReceipt = async (hash: any) => {
+    let receipt = null;
+    while (receipt === null) { // Polling for receipt
+      try {
+        receipt = await web3.eth.getTransactionReceipt(hash);
+        // Wait for a short period before polling again to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 20000));
+      } catch (error) {
+        console.error('Error fetching transaction receipt: ', error);
+      }
+    }
+    return receipt;
+  };
+  
 
   return (
     <Box sx={{ flexGrow: 1 }}>

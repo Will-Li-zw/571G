@@ -50,11 +50,41 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { HomePage } from './components/HomePage';
 import { LoginPage } from './components/LoginPage';
 import { useWeb3React } from '@web3-react/core';
-
+import { useEffect } from 'react';
+import { useAppDispatch } from './hooks'; 
+import { setCardImageMap } from './store/cardImageMapSlice';
+import { fetchUserData, fetchCardImageMap } from './store/mockBackend';
+import { setAddress, setRemainingDraws, setCollection } from './store/userSlice';
+import { getBalance, getUserCollection } from './store/interact';
 export function App(): React.ReactElement {
-  const { active } = useWeb3React();
+  const { active, account } = useWeb3React();
+  const dispatch = useAppDispatch();
+  
   // console.log(active)
+  useEffect(() => {
+    console.log(`User active status: ${active}`); // For debugging
+    if (active) {
+      console.log('Fetching user data...'); // For debugging
+      (async () => {
+        try {
+          // console.log(account)
+          dispatch(setAddress(account?account:""))
 
+          // const userData = await fetchUserData();
+          const balance = await getBalance(account?account:"");
+          const collections = await getUserCollection((account?account:""))
+          console.log(balance,"HomePageBalance")
+          dispatch(setRemainingDraws(balance));
+          dispatch(setCollection(collections));
+
+          const cardImageMapData = await fetchCardImageMap();
+          dispatch(setCardImageMap(cardImageMapData));
+        } catch (error) {
+          console.error('Error fetching data:', error);
+        }
+      })();
+    }
+  }, [active, dispatch, account]);
   return (
     <Router>
       <Routes>

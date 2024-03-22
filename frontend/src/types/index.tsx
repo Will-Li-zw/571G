@@ -5,6 +5,7 @@ export interface Card {
 }
 
 export interface UserState {
+  address : string;
   remainingDraws: number;
   collection: Card[];
 }
