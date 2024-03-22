@@ -46,7 +46,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
         _;
     }
 
-    modifier drawPriceEnough(){
+    modifier drawChanceEnough(){
         require(userBalances[msg.sender] > 0, "Drawchance not enough, cannot draw");
         _;
     }
@@ -145,6 +145,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
     }
 
     // Helper function to remove a card from array
+    // TODO
     function removeCardFromCollection(address user, uint index) internal {
         require(index < userCollection[user].length, "Index out of bounds");
 
@@ -191,7 +192,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
     
 
     // User can draw card given he/she has enough ether
-    function drawRandomCard(string memory collection) external drawPriceEnough returns(uint256){
+    function drawRandomCard(string memory collection) external drawChanceEnough returns(uint256){
         // Random function of chainlink:
         require(poolNameToIds[collection].length != 0, "This pool does not exist");
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
@@ -208,21 +209,26 @@ contract PyramidCards is VRFConsumerBaseV2 {
     }
 
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
+        // retrieve card owner and collection name first
         address cardOwner = s_requestIdToSender[requestId];
         string memory collection = s_requestIdToCollection[requestId];
+        // calculate the drawn card based on rng returned from VRFCoordinatorV2
         uint256 rng = randomWords[0] % MAX_CHANCE_VALUE;
         uint256 cardIndex = getCardIdFromRng(rng, collection);
         console.log("Random card index is: ", cardIndex);
         uint256 cardId = poolNameToIds[collection][cardIndex];
         console.log("Random card id is: ", cardId);
 
-        // user draw this card!
+        // emit the event of drawed card
+        emit CardDraw(cardOwner, cardId);
+
+        // user draw this card
         // if this card already be possessed?
-        Card[] memory cards = userCollection[cardOwner];
-        console.log("User currently has: ", cards.length);
-        for (uint256 i = 0; i < cards.length; i++){
-            if (cards[i].id == cardId){
-                cards[i].quantity += 1;
+        console.log("User currently has: ", userCollection[cardOwner].length);
+        for (uint256 i = 0; i < userCollection[cardOwner].length; i++){
+            if (userCollection[cardOwner][i].id == cardId){
+                userCollection[cardOwner][i].quantity += 1;
+                userBalances[cardOwner] -= 1;
                 return;
             }
         }
@@ -231,23 +237,18 @@ contract PyramidCards is VRFConsumerBaseV2 {
             id: cardId,
             quantity: 1
         }));
-
-        // emit the event of drawed card
-        emit CardDraw(cardOwner, cardId);
+        userBalances[cardOwner] -= 1;
     }
 
     // chance array
     function getChanceArray(string memory collection) public view returns(uint256[] memory) {
-        // 0 - 24, 25 - 49, 50 - 74: 1,2,3
-        // 75 - 89: 4
-        // 90 - 99: 5
         uint256[] memory probability = poolNameToProbabilities[collection];
         uint256[] memory chanceArray = new uint256[](probability.length);
         uint sum = 0;
         for(uint256 i = 0; i < probability.length; i++){
             sum = sum + probability[i];
             chanceArray[i] = sum;
-        }
+        }        
         return chanceArray;
     }
 

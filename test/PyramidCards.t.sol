@@ -11,22 +11,38 @@ contract PyramidCardsTest is Test {
         address owner;
         uint256 amount; 
     }
-
+    // local contracts deployment:
     PyramidCards public pyramidCards;
     VRFCoordinatorV2Mock public vrfCoordinatorMock;
 
-    address customer = address(1); // fake user
-    uint256 constant PRICE = 0.001 ether; // test ether
-    address admin = address(2); // fake admin
-
+    // params to deploy the contract
     uint96 constant BASE_FEE = 1e17; // 25e^18      base_cost per each request
     uint96 constant GAS_PRICE_LINK = 1e9;  
-
     uint96 constant FUND_AMOUNT = 1e18;  // 1e^18
     uint32 constant callBackGasLimit = 100000;
     bytes32 constant gasLane = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
 
-    string constant collection = "A";
+    // mock accounts
+    address customer = address(1); // fake user
+    address admin = address(2); // fake admin
+
+    // params for test
+    uint256 constant PRICE = 0.001 ether; // test ether
+    uint256 constant NUMS_EXCHANGE_CHANCE = 4; 
+    
+    // Test cases for admin functions (for collection tests)
+    string collectionTestName = "TestCollection";
+    uint256[] validProbabilities = [20, 30, 50];
+    uint256[] invalidProbabilities = [30, 40, 60];
+
+    // Test cases for admin functions (for award tests)
+    string awardTestName = "TestAward";
+    string awardTestName2 = "TestAward2";
+    uint256[] validRequiredIds = [1, 2, 3];
+    uint256[] invalidRequiredIds = [1, 2, 3, 4];
+    uint256[] requiredNums = [1, 1, 2];
+    uint256[] invalidRequiredNums = [1, 1, 2, 3];
+    
     // uint256[] ids = new uint256[](5);
     // uint256[] prob = new uint256[](5);
 
@@ -42,7 +58,7 @@ contract PyramidCardsTest is Test {
 
         vrfCoordinatorMock.addConsumer(sub_id, address(pyramidCards));
 
-        (uint96 balance, uint64 reqCount, address owner, address[] memory consumers) = vrfCoordinatorMock.getSubscription(sub_id);
+        (uint96 balance, , address owner, address[] memory consumers) = vrfCoordinatorMock.getSubscription(sub_id);
         console.log("Balance is: ", balance);
         console.log("owner is: ", owner);
         console.log("Address of this contract is: ", address(this));
@@ -50,23 +66,14 @@ contract PyramidCardsTest is Test {
         console.log("consumer is: ", consumers[0]);
 
         vm.deal(customer, 10 ether);    // original balance of user
-
-        // setup the ids and probs
-        // ids[0] = 1;
-        // ids[1] = 2;
-        // ids[2] = 3;
-        // ids[3] = 4;
-        // ids[4] = 5;
-        // // ids = [uint256(1), 2, 3, 4, 5];
-        // prob[0] = 10;
-        // prob[1] = 10;
-        // prob[2] = 10;
-        // prob[3] = 35;
-        // prob[4] = 35;
         vm.stopPrank();
     }
 
-    // test 1 -- test addbalance
+    // ============================================== Customer Function Test ==============================================
+
+    /** 
+     * Test 1: User can add a multiple draw chance to their balance
+     */ 
     function testAddBalance() public {
         uint256 initialBalance = pyramidCards.getUserBalances(customer);
         uint16 unit = 3;
@@ -81,6 +88,9 @@ contract PyramidCardsTest is Test {
         vm.stopPrank();
     }
 
+    /** 
+     * Test 2: addBalance edge case test: no value received
+     */ 
     function testAddBalanceFailWithZeroAmount() public {
         vm.prank(customer); 
         vm.expectRevert("The sent balance must be greater than 0"); 
@@ -88,6 +98,9 @@ contract PyramidCardsTest is Test {
         vm.stopPrank();
     }
 
+    /** 
+     * Test 3: addBalance edge case test: when value received is not a multiple of unit price
+     */ 
     function testAddBalanceFailWithNonMultipleOfPrice() public {
         uint256 nonMultipleAmount = 0.0015 ether; // An amount that is not a multiple of PRICE
         vm.prank(customer); 
@@ -95,28 +108,43 @@ contract PyramidCardsTest is Test {
         pyramidCards.addBalance{value: nonMultipleAmount}();
     }
 
+    /** 
+     * Test 4: User could redeem four same cards to one draw chance
+     */ 
     function testRedeemChance() public {
         uint256 cardIdToRedeem = 1;
-        uint256 NUMS_EXCHANGE_CHANCE = 4; // Assuming this is a constant in your contract
 
-        // Mint cards to the customer, test both consume all of the chosen cards or not
+        // Add cards to the customer, test both consume all of the chosen cards or not
         vm.startPrank(admin);
         pyramidCards.testMintCard(customer, cardIdToRedeem, NUMS_EXCHANGE_CHANCE);
         pyramidCards.testMintCard(customer, cardIdToRedeem + 1, NUMS_EXCHANGE_CHANCE + 1);
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+        bool card1Found;
+        bool card2Found;
+        for (uint i = 0; i < ids.length; i++) {
+            if (ids[i] == cardIdToRedeem) {
+                //the second card should still be in the collection with quantity 1
+                assertEq(quantities[i], NUMS_EXCHANGE_CHANCE, "Card quantity should be 4");
+                card1Found = true;
+            }
+            if (ids[i] == cardIdToRedeem + 1) {
+                assertEq(quantities[i], NUMS_EXCHANGE_CHANCE+1, "Card quantity should be 5");
+                card2Found = true;
+            }
+        }
+        assertEq(card1Found, true, "card 1 does not exist");
+        assertEq(card2Found, true, "card 2 does not exist");
         vm.stopPrank();
         
-        // Check the balance has increased as expected
         uint256 initialChances = pyramidCards.getUserBalances(customer);
         vm.startPrank(customer);
         pyramidCards.redeemChance(cardIdToRedeem);
         pyramidCards.redeemChance(cardIdToRedeem + 1);
-
         uint256 newChances = pyramidCards.getUserBalances(customer);
-        assertEq(newChances, initialChances + 2, "Chances should increase by 1 after redeeming");
+        assertEq(newChances, initialChances + 2, "Chances should increase by 2 after redeeming");   // because we redeem twice
 
-        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+        (ids, quantities) = pyramidCards.getUserCollection(customer);
         bool firstCardFound = false;
-
         for (uint i = 0; i < ids.length; i++) {
             if (ids[i] == cardIdToRedeem + 1) {
                 //the second card should still be in the collection with quantity 1
@@ -132,25 +160,29 @@ contract PyramidCardsTest is Test {
         vm.stopPrank();
     }
 
-
+    /** 
+     * Test 5: User cannot redeem card when no enough cards are selected.
+     */ 
     function testRedeemChanceRevertInsufficientCards() public {
         uint256 cardIdToRedeem = 1;
-        uint256 NUMS_EXCHANGE_CHANCE = 4; // Assuming this is a constant in your contract
         uint256 insufficientQuantity = NUMS_EXCHANGE_CHANCE - 1; // Not enough cards to redeem
 
-        // Mint fewer cards than needed for redemption
+        // Add fewer cards than needed for redemption
         vm.prank(admin);
         pyramidCards.testMintCard(customer, cardIdToRedeem, insufficientQuantity);
 
-        // Expect the transaction to revert
+        // Expect the trans action to revert
         vm.startPrank(customer);
         vm.expectRevert("Not enough cards to redeem chance");
         pyramidCards.redeemChance(cardIdToRedeem);
         vm.stopPrank();
     }
 
+    /** 
+     * Test 6: User should be able to check inventory of collection
+     */ 
     function testGetUserCollection() public {
-        // Setup: Mint two kinds of cards to the customer
+        // Setup: Add two kinds of cards to the customer
         uint256 cardId1 = 1;
         uint256 quantity1 = 3; 
         vm.prank(admin);
@@ -164,47 +196,29 @@ contract PyramidCardsTest is Test {
         (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
 
         // Check that the returned data is correct
+        bool card1Found = false;
+        bool card2Found = false;
         for (uint i = 0; i < ids.length; i++) {
             if (ids[i] == cardId1) {
                 assertEq(quantities[i], quantity1, "Quantity of card 1 does not match");
+                card1Found = true;
             }
             if (ids[i] == cardId2) {
                 assertEq(quantities[i], quantity2, "Quantity of card 2 does not match");
+                card2Found = true;
             }
         }
-
+        assertEq(card1Found, true, "card 1 does not exist");
+        assertEq(card2Found, true, "card 2 does not exist");
     }
-    // function testRandom() public {
-    //     vm.startPrank(customer);
-    //     pyramidCards.AddBalance{value: 1 ether}();
-    //     pyramidCards.drawRandomCard();
-    //     (uint256 i, address owner, uint256 amount) = pyramidCards.userCollection(customer, 0);
-    //     console.log("id is: ", i);
-    //     vm.stopPrank();
-    // }
-
 
     // ============================================== Admin Function Test ==============================================
 
-
-    // Test cases for admin functions (for collection tests)
-    string collectionTestName = "TestCollection";
-    uint256[] validProbabilities = [20, 30, 50];
-    uint256[] invalidProbabilities = [30, 40, 60];
-
-    // Test cases for admin functions (for award tests)
-    string awardTestName = "TestAward";
-    string awardTestName2 = "TestAward2";
-    uint256[] validRequiredIds = [1, 2, 3];
-    uint256[] invalidRequiredIds = [1, 2, 3, 4];
-    uint256[] requiredNums = [1, 1, 2];
-    uint256[] invalidRequiredNums = [1, 1, 2, 3];
-
-
-    /** Test 1: Admin cannot CREATE card collections with invalid inputs, 
+    /** 
+     * Test 1: Admin cannot CREATE card collections with invalid inputs, 
      *          and other users cannot create card collections
      */
-    function testCreateCollections() public {
+    function testCreateCollectionsInvalid() public {
         // If user is not admin (expect to have error)
         vm.startPrank(customer);
         vm.expectRevert("You are not the admin, access denied");
@@ -212,7 +226,7 @@ contract PyramidCardsTest is Test {
         vm.stopPrank();
 
         // If the sum of probabilities does not equal to 100% (expect to have error)
-        vm.startPrank(pyramidCards.admin());
+        vm.startPrank(admin);
         vm.expectRevert("Invalid probability inputs, the sum is not 100%");
         pyramidCards.createCollections(collectionTestName, invalidProbabilities);
 
@@ -224,12 +238,13 @@ contract PyramidCardsTest is Test {
     }
 
 
-    /** Test 2: Admin cannot DELETE card collections with invalid inputs,
+    /** 
+     * Test 2: Admin cannot DELETE card collections with invalid inputs,
      *          and other users cannot delete card collections
      */ 
-    function testDeleteCollections() public {
+    function testDeleteCollectionsInvalid() public {
         // If collection name does not exist (expect to have error)
-        vm.startPrank(pyramidCards.admin());
+        vm.startPrank(admin);
         vm.expectRevert("Collection name is not active");
         pyramidCards.deleteCollections(collectionTestName);
 
@@ -244,28 +259,30 @@ contract PyramidCardsTest is Test {
     }
 
 
-    /** Test 3: Users cannot GET the collections information with invalid inputs
+    /** 
+     * Test 3: Users cannot GET the collections information with invalid inputs
      */ 
-    function testGetCollections() public {
+    function testGetCollectionInformation() public {
         // If collection name does not exist (expect to have error)
         vm.startPrank(customer);
 
         vm.expectRevert("Collection name is not active");
-        uint256[] memory testCollections = pyramidCards.getCollections(collectionTestName);
+        pyramidCards.getCollections(collectionTestName);
 
         vm.expectRevert("Collection name is not active");
-        uint256[] memory testCollectionsProbabilities = pyramidCards.getCollectionProbability(collectionTestName);
+        pyramidCards.getCollectionProbability(collectionTestName);
 
         vm.stopPrank();
     }
 
 
-    /** Test 4: Only admin can create and delete the collections with valid inputs,
+    /** 
+     * Test 4: Only admin can create and delete the collections with valid inputs,
      *          and all users can get the collections information with valid inputs
      */
     function testSuccessAddDeleteGetCollections() public {
         // Admin creates new card collection
-        vm.startPrank(pyramidCards.admin());
+        vm.startPrank(admin);
         pyramidCards.createCollections(collectionTestName, validProbabilities);
         assertEq(pyramidCards.collectionActive(collectionTestName), true);
         vm.stopPrank();
@@ -279,23 +296,25 @@ contract PyramidCardsTest is Test {
         assertEq(testCollectionsProbabilities.length, validProbabilities.length);
         for (uint256 i = 0; i < testCollections.length; i++) {                      // Check the returned probabilities
             assertEq(testCollectionsProbabilities[i], validProbabilities[i]);
+            assertEq(testCollections[i], i + 1);    // id should be from 1 to 3
         }
         vm.stopPrank();
 
         // Admin deletes the card collection
-        vm.startPrank(pyramidCards.admin());
+        vm.startPrank(admin);
         pyramidCards.deleteCollections(collectionTestName);
         assertEq(pyramidCards.collectionActive(collectionTestName), false);
         vm.stopPrank();
     }
 
 
-    /** Test 5: Admin cannot SET collection awards with invalid inputs, 
+    /** 
+     * Test 5: Admin cannot SET collection awards with invalid inputs, 
      *          and other users cannot set collection awards
      */
-    function testSetCollectionAward() public {
+    function testSetCollectionAwardInvalid() public {
         // Create card collections, let idcounter add up to 3
-        vm.startPrank(pyramidCards.admin());
+        vm.startPrank(admin);
         pyramidCards.createCollections(collectionTestName, validProbabilities);
 
         // If the input size of required IDs and required quantities do not match
@@ -320,23 +339,21 @@ contract PyramidCardsTest is Test {
     }
 
 
-    /** Test 6: Admin cannot DELETE collection awards with invalid inputs,
+    /** 
+     * Test 6: Admin cannot DELETE collection awards with invalid inputs,
      *          and other users cannot delete collection awards
      */ 
-    function testDeleteCollectionAward() public {
+    function testDeleteCollectionAwardInvalid() public {
         // Create card collections, let idcounter add up to 3
-        vm.startPrank(pyramidCards.admin());
+        vm.startPrank(admin);
         pyramidCards.createCollections(collectionTestName, validProbabilities);
-
         // If award name does not exist (expect to have error)
-        vm.startPrank(pyramidCards.admin());
         vm.expectRevert("Award name is not active");
         pyramidCards.deleteCollectionAward(awardTestName);
 
         // If user is not admin (expect to have error)
         pyramidCards.setCollectionAward(awardTestName, validRequiredIds, requiredNums);  // Admin creates the collection award first
         vm.stopPrank();
-
         vm.startPrank(customer);
         vm.expectRevert("You are not the admin, access denied");
         pyramidCards.deleteCollectionAward(awardTestName);                         // Other users try to delete the existing collection award
@@ -344,23 +361,25 @@ contract PyramidCardsTest is Test {
     }
 
 
-    /** Test 7: Users cannot GET the collection award information with invalid inputs
+    /** 
+     * Test 7: Users cannot GET the collection award information with invalid inputs
      */ 
-    function testGetCollectionAward() public {
+    function testGetCollectionAwardInvalid() public {
         // If award name does not exist (expect to have error)
         vm.startPrank(customer);
         vm.expectRevert("Award name is not active");
-        (uint256[] memory testAwardRequiredIds, uint256[] memory testAwardRequiredQuantities) = pyramidCards.getCollectionAward(awardTestName);
+        pyramidCards.getCollectionAward(awardTestName);
         vm.stopPrank();
     }
 
 
-    /** Test 8: Only admin can set and delete the collection awards with valid inputs,
+    /** 
+     * Test 8: Only admin can set and delete the collection awards with valid inputs,
      *          and all users can get the awards information with valid inputs
      */
     function testSuccessSetDeleteGetCollectionAward() public {
         // Admin creates new award
-        vm.startPrank(pyramidCards.admin());
+        vm.startPrank(admin);
         pyramidCards.createCollections(collectionTestName, validProbabilities);             // Create card collections, let idcounter add up to 3
         pyramidCards.setCollectionAward(awardTestName, validRequiredIds, requiredNums);
         assertEq(pyramidCards.awardActive(awardTestName), true);
@@ -369,7 +388,6 @@ contract PyramidCardsTest is Test {
         // User gets award information
         vm.startPrank(customer);
         (uint256[] memory testAwardRequiredIds, uint256[] memory testAwardRequiredQuantities) = pyramidCards.getCollectionAward(awardTestName);
-
         assertEq(testAwardRequiredIds.length, validRequiredIds.length);              // Check the size of the array
         assertEq(testAwardRequiredQuantities.length, requiredNums.length);
         for (uint256 i = 0; i < testAwardRequiredIds.length; i++) {             // Check the returned probabilities
@@ -379,14 +397,15 @@ contract PyramidCardsTest is Test {
         vm.stopPrank();
 
         // Admin deletes the award
-        vm.startPrank(pyramidCards.admin());
+        vm.startPrank(admin);
         pyramidCards.deleteCollectionAward(awardTestName);
         assertEq(pyramidCards.awardActive(awardTestName), false);
         vm.stopPrank();
     }
 
 
-    /** Test 9: Only admin can transfer admin rights to a new admin address
+    /** 
+     * Test 9: Only admin can transfer admin rights to a new admin address
      */
     function testChangeAdmin() public {
         // If user is not admin (expect to have error)
@@ -396,92 +415,150 @@ contract PyramidCardsTest is Test {
         vm.stopPrank();
 
         // If user is admin
-        vm.startPrank(pyramidCards.admin());
+        vm.startPrank(admin);
         pyramidCards.changeAdmin(customer);
         assertEq(pyramidCards.admin(), customer);
         vm.stopPrank();
     }
 
 
-    /** Test 10: Only admin can monitor user's card information (collection name, ID, and quantity)
+    /** 
+     * Test 10: Only admin can monitor user's card information (collection name, ID, and quantity)
      */
-    function testGetUserCardCollections() public {
+    function testGetUserCardCollectionsInvalid() public {
         // If user is not admin (expect to have error)
         vm.startPrank(customer);
         vm.expectRevert("You are not the admin, access denied");
         pyramidCards.getUserCardCollections(customer);
         vm.stopPrank();
     }
-        // If user is admin (*** MESSAGE FOR TEAM: TBD, THIS TEST CASE REQIURES USERS TO DRAW CERTAIN AMOUNT OF CARDS ***
+        // TODO: If user is admin (*** MESSAGE FOR TEAM: TBD, THIS TEST CASE REQIURES USERS TO DRAW CERTAIN AMOUNT OF CARDS ***
 
 
-    // ============================================== Draw Card Function Test ==============================================
-    // User should not be able to draw a pool that does not exist.
+    // ============================================== Draw Card VRF Function Test ==============================================
+    /** 
+     * Test 1: User should not be able to draw if the pool does not exist
+     */
     function testRandom() public {
         vm.startPrank(customer);
-        pyramidCards.addBalance{value: 1 ether}();
+        pyramidCards.addBalance{value: PRICE}();
         vm.expectRevert("This pool does not exist");
-        pyramidCards.drawRandomCard(collection);
+        pyramidCards.drawRandomCard(collectionTestName);
         vm.stopPrank();
     }
 
-    // Pyramid contract should correctly records the random request ID
+    /** 
+     * Test 2: Request id to vrfCoordinator should be correctly recorded in the mappings
+     */
     function testRandomRequest() public {
-        // vm.startPrank(admin);
-        // pyramidCards.createCollections(collection, ids, prob);
-        // vm.stopPrank();
+        vm.startPrank(admin);
+        pyramidCards.createCollections(collectionTestName, validProbabilities);
+        assertEq(pyramidCards.collectionActive(collectionTestName), true);
+        vm.stopPrank();
 
-        // vm.startPrank(customer);
-        // pyramidCards.AddBalance{value: 1 ether}();
-        // uint256 requestId = pyramidCards.drawRandomCard(collection);
-        // assertEq(customer, pyramidCards.s_requestIdToSender(requestId));
-        // assertEq(collection, pyramidCards.s_requestIdToCollection(requestId));
-        // // (uint256 i, address owner, uint256 amount) = pyramidCards.userCollection(customer, 0);
-        // // console.log("id is: ", i);
-        // vm.stopPrank();
+        vm.startPrank(customer);
+        pyramidCards.addBalance{value: PRICE}();
+        uint256 requestId = pyramidCards.drawRandomCard(collectionTestName);
+        assertEq(customer, pyramidCards.s_requestIdToSender(requestId));
+        assertEq(collectionTestName, pyramidCards.s_requestIdToCollection(requestId));
+        vm.stopPrank();
     }
 
-    // VRFMock should correctly callback and create card for user
-    function testRandomCardCreation1() public {
-        // create collection of cards
-        // vm.startPrank(admin);
-        // pyramidCards.createCollections(collection, ids, prob);
-        // vm.stopPrank();
-        // // now consumer draw
-        // vm.startPrank(customer);
-        // pyramidCards.AddBalance{value: 1 ether}();
-        // uint256 requestId = pyramidCards.drawRandomCard(collection);
-        // vm.expectEmit(true, false, false, true);
-        // // 2. Emit the expected event
-        // emit CardDraw(address(customer), 4);
-        // vrfCoordinatorMock.fulfillRandomWords(requestId, address(pyramidCards));
+    /** 
+     * Test 3: user should be able to add a random card into his/her collection. 
+     */
+    function testRandomDrawforOnce() public {
+        // create a collection of cards
+        vm.startPrank(admin);
+        pyramidCards.createCollections(collectionTestName, validProbabilities);        
+        vm.stopPrank();
 
-        // (uint256 i, uint256 amount) = pyramidCards.userCollection(customer, 0);
-        // console.log("the newly created id is: ", i);
-        // assertEq(amount, 1);
-        // vm.stopPrank();
+        // user now draw
+        vm.startPrank(customer);
+        pyramidCards.addBalance{value: PRICE}();
+        uint256 requestId = pyramidCards.drawRandomCard(collectionTestName);
+        vm.expectEmit(true, false, false, true);
+        // 2. Emit the expected event
+        emit CardDraw(address(customer), 2);
+        vrfCoordinatorMock.fulfillRandomWords(requestId, address(pyramidCards));    // NOTE: the random seed is set by requestId, which is always 1 in this case
+                                                                                    // So the returned random word is always the same
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+        assertEq(ids.length, 1, "Only one card should be drawn");
+        assertEq(ids[0], 2, "Drawn card will have id 2 in this specific case");
+        assertEq(quantities[0], 1, "We only draw one card, but non-1 value received");
+        vm.stopPrank();
     }
 
-    // VRFMock multiple requests test
-    function testRandomCardCreation2() public {
-        // create collection of cards
-        // vm.startPrank(admin);
-        // pyramidCards.createCollections(collection, ids, prob);
-        // vm.stopPrank();
-        // // now consumer draw
-        // vm.startPrank(customer);
-        // pyramidCards.AddBalance{value: 1 ether}();
-        // uint256 requestId = pyramidCards.drawRandomCard(collection);
-        // vrfCoordinatorMock.fulfillRandomWords(requestId, address(pyramidCards));
+    /** 
+     * Test 4: user draw "randomly" 5 times and check the result, mock random test
+     */
+    function testRandomDraw5times() public {
+        vm.startPrank(admin);
+        pyramidCards.createCollections(collectionTestName, validProbabilities);        
+        vm.stopPrank();
 
-        // requestId = pyramidCards.drawRandomCard(collection);
-        // vrfCoordinatorMock.fulfillRandomWords(requestId, address(pyramidCards));
+        // user now draw
+        vm.startPrank(customer);
+        pyramidCards.addBalance{value: 5*PRICE}();
 
-        // (uint256 i, uint256 amount) = pyramidCards.userCollection(customer, 0);
-        // // console.log("the newly created id is: ", i);
-        // assertEq(amount, 1);
-        // vm.stopPrank();
+        // 1st Draw
+        uint256 requestId;
+        requestId = pyramidCards.drawRandomCard(collectionTestName);
+        vm.expectEmit(true, false, false, true);
+        emit CardDraw(address(customer), 2);
+        vrfCoordinatorMock.fulfillRandomWords(requestId, address(pyramidCards));    // NOTE: the random seed is set by requestId, which is always 1 in this case
+                                                                                    // So the returned random word is always the same
+        // 2nd Draw
+        requestId = pyramidCards.drawRandomCard(collectionTestName);
+        vm.expectEmit(true, false, false, true);
+        emit CardDraw(address(customer), 2);
+        vrfCoordinatorMock.fulfillRandomWords(requestId, address(pyramidCards));
 
-    }
+        // 3rd Draw
+        requestId = pyramidCards.drawRandomCard(collectionTestName);
+        vm.expectEmit(true, false, false, true);
+        emit CardDraw(address(customer), 2);
+        vrfCoordinatorMock.fulfillRandomWords(requestId, address(pyramidCards));
+
+        // 4th Draw
+        requestId = pyramidCards.drawRandomCard(collectionTestName);
+        vm.expectEmit(true, false, false, true);
+        emit CardDraw(address(customer), 2);
+        vrfCoordinatorMock.fulfillRandomWords(requestId, address(pyramidCards));
+
+        // 5th Draw
+        requestId = pyramidCards.drawRandomCard(collectionTestName);
+        vm.expectEmit(true, false, false, true);
+        emit CardDraw(address(customer), 3);
+        vrfCoordinatorMock.fulfillRandomWords(requestId, address(pyramidCards));
+
+        // 6th Draw expect fail because out of balance:
+        vm.expectRevert("Drawchance not enough, cannot draw");
+        requestId = pyramidCards.drawRandomCard(collectionTestName);
+
+        
+        // Final check: 
+        // id2 card: 4 times
+        // id3 card: 1 time
+        (uint256[] memory ids, uint256[] memory quantities) = pyramidCards.getUserCollection(customer);
+        bool id2Found = false;
+        bool id3Found = false;
+        for (uint i = 0; i < ids.length; i++){
+            if (ids[i] == 2){
+                assertEq(quantities[i], 4, "Wrong number of id2 card found");
+                id2Found = true;
+            }
+            else if (ids[i] == 3){
+                assertEq(quantities[i], 1, "Wrong number of id3 card found");
+                id3Found = true;
+            }
+            else {
+                revert("wrong id detected, should not have been drawn");
+            }
+        }
+        assertEq(id2Found, true, "No id2 card found.");
+        assertEq(id3Found, true, "No id3 card found.");
+        vm.stopPrank();
+    } 
 
 }
