@@ -404,7 +404,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
     }
 
 
-    /** Admin can draw money from the contract      *** MESSAGE FOR TEAM: TBD, NOT SURE IF WE NEED THIS FUNCTION NOW ***
+    /** Admin can draw money from the contract
      */
     function adminDrawMoney() public isAdmin {
         require(address(this).balance > 0, "The balance of this contract should be larger than 0");

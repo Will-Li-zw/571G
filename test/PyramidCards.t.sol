@@ -466,6 +466,31 @@ contract PyramidCardsTest is Test {
         assertEq(cardQuantities[0], 1, "Only one card of id 2 should be drawn");
 
     }
+
+    /** 
+     * Test 11: Admin can withdraw the money in the contract
+     */
+    function testWithDrawContractMoney() public {
+        // when no balance in the contract, withdraw fails
+        uint256 initialAdminBalance = admin.balance;
+        vm.startPrank(admin);
+        vm.expectRevert("The balance of this contract should be larger than 0");
+        pyramidCards.adminDrawMoney();
+        vm.stopPrank();
+        
+        // customer cannot withdraw
+        vm.startPrank(customer);
+        pyramidCards.addBalance{value: PRICE}();
+        vm.expectRevert("You are not the admin, access denied");
+        pyramidCards.adminDrawMoney();
+        vm.stopPrank();
+
+        // admin successfully withdraw
+        vm.startPrank(admin);
+        pyramidCards.adminDrawMoney();
+        uint256 afterAdminBalance = admin.balance;
+        assertEq(initialAdminBalance+PRICE, afterAdminBalance, "The money withdrawn is not correct");
+    }
     
 
     // ============================================== Draw Card VRF Function Test ==============================================
