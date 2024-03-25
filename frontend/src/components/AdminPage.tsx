@@ -7,6 +7,7 @@ import { setPoolProbMap } from '../store/poolProbMapSlice';
 import { setCardImageMap } from '../store/cardImageMapSlice';
 import { RootState } from '../store/store';
 import { RewardMap ,Card} from '../types';
+import { adminCreate } from '../store/interact';
 
 export const AdminPage = () => {
   const cardImageMap = useSelector((state: RootState) => state.cardImageMap);
@@ -34,7 +35,7 @@ export const AdminPage = () => {
     return sum.toFixed(2) === '1.00';
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateProbabilities()) {
       alert('The sum of probabilities must be 1. Please adjust the card probabilities.');
       return;
@@ -44,23 +45,31 @@ export const AdminPage = () => {
     console.log(`Collector Name: ${collectorName}, Cards: ${JSON.stringify(cards)}, Award Name: ${awardName}`);
     const startingId = Object.keys(cardImageMap).reduce((maxId, currentId) => Math.max(maxId, parseInt(currentId, 10)), 0) + 1;
 
-    // Mock backend response with IDs for each card
+    try {
+      await adminCreate(collectorName, awardName, cards.map(card => parseInt(card.prob)*100), cards.map(card => card.url));
+      // // Assuming each card quantity is 1 for simplicity
+      // const awardCards = cards.map((card, index) => ({ id: index + 100, quantity: 1 })); // Example ID logic
+      // await setCollectionAward(awardName, awardCards);
+      const cardIds = cards.map((_, index) => index + 100); // Mock IDs as incremental numbers
+      
+      // Dispatch updates to Redux
+      dispatch(setRewardMap({...storeContent, [awardName]: cardIds.map(id => ({ id, quantity: 1 })) }));
+      dispatch(setPoolProbMap({ ...pools, [collectorName]: cards.map((card, index) => ({ id: cardIds[index], prob: parseFloat(card.prob) })) }));
+      dispatch(setCardImageMap({
+        ...cardImageMap,
+        ...cards.reduce((acc, card, index) => ({
+          ...acc,
+          [cardIds[index]]: card.url
+        }), {})
+      }));
+      alert('Submission successful!');
 
+  } catch (error:any) {
+      alert(`Submission failed: ${error.message}`);
+  }
     const cardIds = cards.map((_, index) => index + 100); // Mock IDs as incremental numbers
 
-    // Dispatch updates to Redux
-    dispatch(setRewardMap({...storeContent, [awardName]: cardIds.map(id => ({ id, quantity: 1 })) }));
-    dispatch(setPoolProbMap({ ...pools, [collectorName]: cards.map((card, index) => ({ id: cardIds[index], prob: parseFloat(card.prob) })) }));
-    // dispatch(setCardImageMap({...cardImageMap,...newEntries} ));
-    dispatch(setCardImageMap({
-      ...cardImageMap,
-      ...cards.reduce((acc, card, index) => ({
-        ...acc,
-        [cardIds[index]]: card.url
-      }), {})
-    }));
 
-    alert('Submission successful!');
   };
 
   return (

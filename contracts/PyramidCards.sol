@@ -334,7 +334,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
      *   Output: None
      */
     function setCollectionAward(string memory awardName, uint256[] memory ids, uint256[] memory num) public isAdmin isAwardValidToAdd(awardName, ids, num) {
-        // Store the input required IDs and required quantities of the new award in the mapping
+        // Store the input required IDs and required quantities of the new award in the mappingcreateCollections
         for (uint256 i = 0; i < ids.length; i++) {
             collectionAward[awardName].push(Card({
                 id: ids[i],

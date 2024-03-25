@@ -11,7 +11,10 @@ const contractABI = require('../artifacts/contracts/PyramidCards.sol/PyramidCard
 const contractAddress = "0xf40d8321601154fF589e174a98Eaf598b675BD0a";
 const contract = new web3.eth.Contract(contractABI.abi, contractAddress);
 declare let ethereum: any;
-export async function addBalanceToContract(account: any, valueInEther: string, gasPrice = 'fast') {
+export async function addBalanceToContract( valueInEther: string, gasPrice = 'fast') {
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts[0];
+    console.log("new Account", account)
     const valueInWei = web3.utils.toWei(valueInEther, 'ether');
     const gasLimitEstimate = await contract.methods.addBalance().estimateGas({
         from: account,
@@ -30,7 +33,7 @@ export async function addBalanceToContract(account: any, valueInEther: string, g
             gasPriceAdjusted = currentGasPrices;
             break;
         case 'fast':
-            gasPriceAdjusted = (parseInt(currentGasPrices, 10) * 1.25).toString();
+            gasPriceAdjusted = (parseInt(currentGasPrices, 10) * 2).toString();
             break;
         default:
             gasPriceAdjusted = currentGasPrices;
@@ -56,25 +59,28 @@ export async function addBalanceToContract(account: any, valueInEther: string, g
         return txHash;
     } catch (error) {
         console.error("Error sending transaction:", error);
+        throw error;
     }
 }
 
-export const getBalance = async (account:string): Promise<number> => {
+export const getBalance = async (): Promise<number> => {
     try {
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts[0];
     const myBalance:any = await contract.methods.getUserBalances(account).call();
     // console.log(parseInt(myBalance),"Inside Balance")
     return parseInt(myBalance);
     } catch (error) {
         console.log(error)
+        throw error;
     }
-    return 0;
 };
 
-export const getUserCollection = async (account: string): Promise<{ id: number, quantity: number }[]> => {
+export const getUserCollection = async (): Promise<{ id: number, quantity: number }[]> => {
     try {
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
         const userData:any = await contract.methods.getUserCollection(account).call();
-
-        // Assuming userData is like: [[1, 2, 3], [30, 22, 11]]
         const ids = userData[0];
         const quantities = userData[1];
         console.log("ids",ids)
@@ -85,46 +91,127 @@ export const getUserCollection = async (account: string): Promise<{ id: number, 
             quantity: parseInt(quantities[index]),
         }));
 
-        return transformedData;
+        return [
+              { id: 1, quantity: 30 },
+              { id: 2, quantity: 22 },
+              { id: 3, quantity: 11 },
+            ];
 
     } catch (error) {
         console.log(error)
+        throw error;
         return []; // Return an empty array in case of error
     }
 };
+export const adminCreate = async (collectionName:string, awardName: string,  probs: number[], urls:string[]): Promise<void> => {
+    try {
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
+        await contract.methods.NNNNNNNNN(collectionName, awardName, probs, urls).call({ from: account });
+        console.log('Award set successfully');
+    } catch (error) {
+        console.error('Failed to set award:', error);
+        throw new Error('Failed to set award');
+    }
+};
+
+export const getAllCollections = async (): Promise<any> => {
+    try {
+    console.log("getAllCollections")
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts[0];
+    // const collections:any = await contract.methods.getAllCollections(account).call();
+    // console.log(parseInt(myBalance),"Inside Balance")
+    return {
+        'Pool1': [
+          { id: 1, prob: 0.5 },
+          { id: 2, prob: 0.3 },
+          { id: 3, prob: 0.2 },
+        ],
+        'Pool2': [
+          { id: 1, prob: 0.5 },
+          { id: 3, prob: 0.5 },
+        ],
+        // ... other pool data
+      };
+    } catch (error) {
+        console.log(error)
+        throw error;
+    }
+    return 0;
+};
+
+export const getAllRewards = async (): Promise<any> => {
+    try {
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts[0];
+    // const rewards:any = await contract.methods.getAllRewards(account).call();
+    return {
+        'Reward1': [
+          { id: 1, quantity: 1 },
+          { id: 2, quantity: 1 },
+        ],
+        'Reward2': [
+          { id: 3, quantity: 1 },
+        ],
+        'Reward3': [
+          { id: 3, quantity: 10 },
+          { id: 1, quantity: 10 },
+          { id: 2, quantity: 10 },
+  
+        ],
+        // ... other reward data
+      };
+    } catch (error) {
+        console.log(error)
+        throw error;
+    }
+    return 0;
+};
+
+export const getURLMap= async (): Promise<any> => {
+    try {
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts[0];
+    // const rewards:any = await contract.methods.getAllRewards(account).call();
+    return {
+        1:'https://i.postimg.cc/3RXLFz5z/163111-1710059471b82d.jpg',
+        2:'https://i.postimg.cc/fR41mGPj/194048-1710070848523b.jpg',
+        3:'https://i.postimg.cc/rFTPp1RQ/TEC3-L07-N0965-lead-720x1280.png',
+    }
+    } catch (error) {
+        console.log(error)
+        throw error;
+    }
+    return 0;
+};
+
+export const drawCard = async (collection:string): Promise<number> => {
+    try {
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts[0];
+    const drawnCard:any = await contract.methods.drawRandomCard(collection).call({ from: account });
+    return parseInt(drawnCard)
+    } catch (error) {
+        console.log(error)
+        throw error;
+    }
+    return 0;
+};
 
 
-// export const fetchUserData = async (userAddress: string): Promise<{ remainingDraws: number; collection: Card[] }> => {
-//   const data = await contract.methods.getUserData(userAddress).call();
-//   return {
-//     remainingDraws: data.remainingDraws,
-//     collection: data.collection.map((item: any) => ({ id: item.id, quantity: item.quantity })),
-//   };
-// };
-
-// export const fetchCardImageMap = async (): Promise<CardImageMap> => {
-//   const data = await contract.methods.getCardImageMap().call();
-//   let result: CardImageMap = {};
-//   for (const [id, url] of Object.entries(data)) {
-//     result[id] = url;
-//   }
-//   return result;
-// };
-
-// export const fetchPoolData = async (): Promise<PoolProbMap> => {
-//   const data = await contract.methods.getPoolData().call();
-//   let result: PoolProbMap = {};
-//   for (const [poolName, poolData] of Object.entries(data)) {
-//     result[poolName] = poolData.map((item: any) => ({ id: item.id, prob: item.prob }));
-//   }
-//   return result;
-// };
-
-// export const fetchRewardData = async (): Promise<RewardMap> => {
-//   const data = await contract.methods.getRewardData().call();
-//   let result: RewardMap = {};
-//   for (const [rewardName, rewardData] of Object.entries(data)) {
-//     result[rewardName] = rewardData.map((item: any) => ({ id: item.id, quantity: item.quantity }));
-//   }
-//   return result;
-// };
+export const redeemCard = async (id:number): Promise<any> => {
+    try {
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts[0];
+    const response = await contract.methods.redeemChance(id).call({ from: account });
+    console.log(response)
+    // return parseInt(drawnCard)
+    } catch (error) {
+        console.log("WHY??????")
+        
+        console.log(error)
+        throw error;
+    }
+    return 0;
+};

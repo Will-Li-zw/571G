@@ -9,6 +9,7 @@ import { setRemainingDraws, setCollection } from '../store/userSlice';
 // Import the RootState type from your store for TypeScript typing of state
 import { RootState } from '../store/store';
 import { addBalanceToContract, getBalance ,getUserCollection } from '../store/interact';
+import { drawCard } from '../store/interact';
 import Web3 from 'web3';
 // Define the DrawCard component
 export const DrawCard = () => {
@@ -60,13 +61,21 @@ export const DrawCard = () => {
   };
 
   // Function to handle the "Draw" button click
-  const handleDrawClick = () => {
+  const handleDrawClick = async () => {
     if (remainingDraws > 0) {
-      const drawnCardId = drawCardWithProbability(selectedPool);
+      // const drawnCardId = drawCardWithProbability(selectedPool);
+      let drawnCardId = 0;
+      try {
+        drawnCardId = await drawCard(selectedPool);
+      } catch (error) {
+        console.log("API FAIL")
+        alert("Draw API card failed");
+        return
+      }
       if (drawnCardId) {
         const existingCardIndex = userCollection.findIndex(card => card.id === drawnCardId);
         if (existingCardIndex >= 0) {
-          const newCollection = userCollection.map((card, index) => {
+            const newCollection = userCollection.map((card, index) => {
             if (index === existingCardIndex) {
               return { ...card, quantity: card.quantity + 1 };
             }
@@ -89,7 +98,7 @@ export const DrawCard = () => {
     const amount = parseInt(buyAmount, 10) || 0;
     
     // This call returns a transaction hash.
-    const txHash = await addBalanceToContract(account, (amount * 0.001).toString());
+    const txHash = await addBalanceToContract((amount * 0.001).toString());
     console.log(`Transaction Hash: ${txHash}`);
   
     // Wait for the transaction to be mined
@@ -115,8 +124,9 @@ export const DrawCard = () => {
       try {
         receipt = await web3.eth.getTransactionReceipt(hash);
         // Wait for a short period before polling again to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 20000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (error) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
         console.error('Error fetching transaction receipt: ', error);
       }
     }
