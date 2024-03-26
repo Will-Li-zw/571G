@@ -101,7 +101,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
     // ============================================== Events ==============================================
     event AdminChanged(address indexed oldAdmin, address indexed newAdmin);     // Event to log the transfer of admin rights (optional)
     event CardDraw(address indexed owner, uint256 id);  // Event to log which card is drawn
-    event PoolCreated(address indexed admin, string poolName); // event to log pool
+    event PoolCreated(address indexed admin, uint256[] ids); // event to log pool
 
 
     // ============================================== User Functions ==============================================
@@ -287,7 +287,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
      *  Input : The collection name and an array of each card's probability
      *  Output: None
      */
-    function createCollections(string memory name, string memory awardName, uint256[] memory probabilities, string[] memory urls) external isAdmin isCollectionValidToCreate(name, probabilities) returns (uint256[] memory){
+    function createCollections(string memory name, string memory awardName, uint256[] memory probabilities, string[] memory urls) external isAdmin isCollectionValidToCreate(name, probabilities){
         // Store the IDs and probabilities of the new collection in the two mappings
         uint256[] memory result_ids = new uint256[](probabilities.length);
         poolNamesArray.push(name);  
@@ -310,8 +310,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
         }
         // Activate the collection (update the tracker mapping)
         collectionActive[name] = true;
-        emit PoolCreated(msg.sender, name);
-        return result_ids;
+        emit PoolCreated(msg.sender, result_ids);
     }
 
 
