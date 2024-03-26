@@ -21,6 +21,13 @@ contract PyramidCards is VRFConsumerBaseV2 {
 
     mapping(string => uint256[]) public poolNameToIds;   // Collection "A" -> id [1,2,3,4,5] id are fixed
     mapping(string => uint256[]) public poolNameToProbabilities; //     "A" -> pro[20,20,20,20,20]
+    
+    string[] public poolNamesArray;                          // pool names keys to find all information stored in mappings
+    uint256[] public idArray;                               // plain ids array
+    uint256[] public probArray;                             // plain prob array for front-end
+    uint256[] public lensArray;                              // plain lens array records the lenth of each PoolName string to numof ids
+    string[] public awardNameArray;                         // plain award array to store keys
+
     mapping(string => Card[]) public collectionAward;   // collection and their rewards
 
     uint256 public idCounter = 0;                       // Tracks the next sequential number for assigning each ID (ID will never repeat)
@@ -28,6 +35,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
     mapping(string => bool) public awardActive;         // Tracks the existing keys in collectionAward mapping
     mapping(uint256 => string) private IdsToPoolName;   // Records each ID as KEY and its corresponding collection name as VALUE
                                                         // *** MESSAGE FOR TEAM: CAN EITHER CHANGE THE CARD STRUCT (ADD COLLECTION NAME VARIABLE) OR SET THIS REVERSED MAPPING ***
+    mapping(uint256 => string) private IdsToUrls;       // Records id to url of each image
 
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     // Variables for chainlink random number function:
@@ -278,16 +286,29 @@ contract PyramidCards is VRFConsumerBaseV2 {
      *  Input : The collection name and an array of each card's probability
      *  Output: None
      */
-    function createCollections(string memory name, uint256[] memory probabilities) external isAdmin isCollectionValidToCreate(name, probabilities) {
+    function createCollections(string memory name, string memory awardName, uint256[] memory probabilities, string[] memory urls) external isAdmin isCollectionValidToCreate(name, probabilities) returns (uint256[] memory){
         // Store the IDs and probabilities of the new collection in the two mappings
+        uint256[] memory result_ids;
+        poolNamesArray.push(name);  
+        awardNameArray.push(awardName);
+        lensArray.push(probabilities.length);
         for (uint256 i = 0; i < probabilities.length; i++) {
             idCounter++;                                            // Let ID start from 1
             poolNameToIds[name].push(idCounter);                    // Increase the size of the array and add the IDs 
             poolNameToProbabilities[name].push(probabilities[i]);   // Increase the size of the array and add the probabilities
             IdsToPoolName[i] = name;                                // Record the collection name for each new card ID
+            IdsToUrls[i] = urls[i];                                 // Record the url of the image
+            collectionAward[awardName].push(Card({
+                                                    id: idCounter,
+                                                    quantity: 1
+                                                }));
+            idArray.push(idCounter);
+            probArray.push(probabilities[i]);
+            result_ids[i] = idCounter;
         }
         // Activate the collection (update the tracker mapping)
         collectionActive[name] = true;
+        return result_ids;
     }
 
 
@@ -410,6 +431,42 @@ contract PyramidCards is VRFConsumerBaseV2 {
         require(address(this).balance > 0, "The balance of this contract should be larger than 0");
         (bool ok, ) = admin.call{value: address(this).balance}("");
         require(ok, "Failed to withdraw ether to admin");
+    }
+
+     // ============================================== front-end Functions ==============================================
+    // front-end method to get all urls with ids one-to-one 
+    function getAllURLs() view external returns(uint256[] memory, string[] memory){
+        string[] memory result_urls;
+        for (uint256 i = 0; i < idArray.length; i++){
+            string memory url = IdsToUrls[idArray[i]];
+            result_urls[i] = url;
+        }
+        return (idArray, result_urls);
+    }
+
+     // front-end method to get all information about collections
+    function getAllCollections() view external returns (string[] memory, uint256[] memory, uint256[] memory, uint256[] memory){
+        return (poolNamesArray, idArray, probArray, lensArray);
+    }
+
+    // front-end method to get all information about collections
+    function getAllRewards() view external returns (string[] memory, uint256[] memory, uint256[] memory, uint256[] memory){
+        uint256[] memory quantityArray = new uint256[](idArray.length);
+        uint256 index = 0;
+        for (uint256 i = 0; i < poolNamesArray.length; i++){
+            string memory collection = poolNamesArray[i];           // find the pool name
+            Card[] memory cards = collectionAward[collection];      // find the cards[] array
+            for (uint256 j = 0; j < cards.length; j++){             // then we extract the quantity information
+                quantityArray[index] = cards[j].quantity;
+                index += 1;
+            }
+        }
+        return (awardNameArray, idArray, quantityArray, lensArray);
+    }
+
+    // front-end method to judge current user is admin or not
+    function accountIsAdmin() view external returns (bool) {
+        return (msg.sender == admin);
     }
 
 }
