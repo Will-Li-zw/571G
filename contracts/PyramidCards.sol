@@ -16,13 +16,18 @@ contract PyramidCards is VRFConsumerBaseV2 {
     uint256 public constant PRICE = 0.001 ether;
     address public admin;
 
-    mapping(address => uint256) public userBalances;     // balance of each user
+    mapping(address => uint256) public userBalances;     // draw balance of each user
     mapping(address => Card[]) public userCollection;    // cards collection of each user
 
     mapping(string => uint256[]) public poolNameToIds;   // Collection "A" -> id [1,2,3,4,5] id are fixed
     mapping(string => uint256[]) public poolNameToProbabilities; //     "A" -> pro[20,20,20,20,20]
-    mapping(string => Card[]) public collectionAward;   // TODO: "Fake award"
+    mapping(string => Card[]) public collectionAward;   // collection and their rewards
 
+    uint256 public idCounter = 0;                       // Tracks the next sequential number for assigning each ID (ID will never repeat)
+    mapping(string => bool) public collectionActive;    // Tracks the existing keys in poolNameToIds mapping (default value is FALSE for booleans)
+    mapping(string => bool) public awardActive;         // Tracks the existing keys in collectionAward mapping
+    mapping(uint256 => string) private IdsToPoolName;   // Records each ID as KEY and its corresponding collection name as VALUE
+                                                        // *** MESSAGE FOR TEAM: CAN EITHER CHANGE THE CARD STRUCT (ADD COLLECTION NAME VARIABLE) OR SET THIS REVERSED MAPPING ***
 
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     // Variables for chainlink random number function:
@@ -31,7 +36,6 @@ contract PyramidCards is VRFConsumerBaseV2 {
     uint32 private immutable i_callBackGasLimit;
     uint32 private constant NOM_WORDS = 1;
     uint16 private constant REQEUST_CONFIRMATIONS = 3;
-
     uint256 private constant MAX_CHANCE_VALUE = 100;
     // record mapping
     mapping(uint256 => address) public s_requestIdToSender;
@@ -40,13 +44,14 @@ contract PyramidCards is VRFConsumerBaseV2 {
     // number of cards to redeem for new chance
     uint16 private constant NUMS_EXCHANGE_CHANCE = 4;
 
+
     // ============================================== Modifiers ==============================================
     modifier isAdmin(){
         require(msg.sender == admin, "You are not the admin, access denied");
         _;
     }
 
-    modifier drawPriceEnough(){
+    modifier drawChanceEnough(){
         require(userBalances[msg.sender] > 0, "Drawchance not enough, cannot draw");
         _;
     }
@@ -86,13 +91,12 @@ contract PyramidCards is VRFConsumerBaseV2 {
     }
 
     // ============================================== Events ==============================================
-    event CardListed(uint256 id, address owner, uint256 price);
-    event CardDelisted(uint256 id);
-    event CardDraw(address indexed owner, uint256 id);
+    event AdminChanged(address indexed oldAdmin, address indexed newAdmin);     // Event to log the transfer of admin rights (optional)
+    event CardDraw(address indexed owner, uint256 id);  // Event to log which card is drawn
 
 
     // ============================================== User Functions ==============================================
-    // constructors
+    // constructor
     constructor(
         address vrfCoordinatorV2,
         bytes32 gasLane,
@@ -107,7 +111,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
         i_callBackGasLimit = callBackGasLimit;
     }
 
-    // User can use this to add balance to theirselves
+    // User can use this to add draw balance to theirselves
     function addBalance() external payable {
         require(msg.value > 0, "The sent balance must be greater than 0");
         require(msg.value % PRICE == 0, "The sent balance must be multiple of unit price");
@@ -116,7 +120,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
         userBalances[msg.sender] += msg.value / PRICE;
     }
 
-    //dismantle cards to redeem chance
+    // dismantle cards to redeem chance
     function redeemChance(uint256 id) external {
         bool cardFound = false;
         // Find the card in the user's collection and check the quantity
@@ -153,7 +157,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
         userCollection[user].pop();
     }
 
-    // Admin function to add cards for testing
+    // FUNCTION only for testing and can only be called by admin
     function testMintCard(address user, uint256 cardId, uint256 quantity) public isAdmin {
         bool cardExists = false;
 
@@ -172,7 +176,9 @@ contract PyramidCards is VRFConsumerBaseV2 {
         }
     }
     
-    function getUserCollection(address user) public view returns(uint256[] memory, uint256[] memory) {
+    // Function to get collection of card of the caller
+    function getUserCollection() public view returns(uint256[] memory, uint256[] memory) {
+        address user = msg.sender;
         uint256[] memory ids = new uint256[](userCollection[user].length);
         uint256[] memory quantities = new uint256[](userCollection[user].length);
 
@@ -185,13 +191,13 @@ contract PyramidCards is VRFConsumerBaseV2 {
         return (ids, quantities);
     }
 
+    // get user's draw chance
     function getUserBalances(address user) public view returns(uint256) {
         return userBalances[user];
     }
     
-
     // User can draw card given he/she has enough ether
-    function drawRandomCard(string memory collection) external drawPriceEnough returns(uint256){
+    function drawRandomCard(string memory collection) external drawChanceEnough returns(uint256){
         // Random function of chainlink:
         require(poolNameToIds[collection].length != 0, "This pool does not exist");
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
@@ -207,22 +213,28 @@ contract PyramidCards is VRFConsumerBaseV2 {
         return requestId;
     }
 
+    // callback function for vrfCoordinatorV2 to genearte randomWords
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
+        // retrieve card owner and collection name first
         address cardOwner = s_requestIdToSender[requestId];
         string memory collection = s_requestIdToCollection[requestId];
+        // calculate the drawn card based on rng returned from VRFCoordinatorV2
         uint256 rng = randomWords[0] % MAX_CHANCE_VALUE;
         uint256 cardIndex = getCardIdFromRng(rng, collection);
         console.log("Random card index is: ", cardIndex);
         uint256 cardId = poolNameToIds[collection][cardIndex];
         console.log("Random card id is: ", cardId);
 
-        // user draw this card!
+        // emit the event of drawed card
+        emit CardDraw(cardOwner, cardId);
+
+        // user draw this card
         // if this card already be possessed?
-        Card[] memory cards = userCollection[cardOwner];
-        console.log("User currently has: ", cards.length);
-        for (uint256 i = 0; i < cards.length; i++){
-            if (cards[i].id == cardId){
-                cards[i].quantity += 1;
+        console.log("User currently has: ", userCollection[cardOwner].length);
+        for (uint256 i = 0; i < userCollection[cardOwner].length; i++){
+            if (userCollection[cardOwner][i].id == cardId){
+                userCollection[cardOwner][i].quantity += 1;
+                userBalances[cardOwner] -= 1;
                 return;
             }
         }
@@ -231,23 +243,18 @@ contract PyramidCards is VRFConsumerBaseV2 {
             id: cardId,
             quantity: 1
         }));
-
-        // emit the event of drawed card
-        emit CardDraw(cardOwner, cardId);
+        userBalances[cardOwner] -= 1;
     }
 
-    // chance array
+    // chance array for cardId generation
     function getChanceArray(string memory collection) public view returns(uint256[] memory) {
-        // 0 - 24, 25 - 49, 50 - 74: 1,2,3
-        // 75 - 89: 4
-        // 90 - 99: 5
         uint256[] memory probability = poolNameToProbabilities[collection];
         uint256[] memory chanceArray = new uint256[](probability.length);
         uint sum = 0;
         for(uint256 i = 0; i < probability.length; i++){
             sum = sum + probability[i];
             chanceArray[i] = sum;
-        }
+        }        
         return chanceArray;
     }
 
@@ -266,16 +273,6 @@ contract PyramidCards is VRFConsumerBaseV2 {
     }
 
     // ============================================== Admin Functions ==============================================
-
-
-    uint256 public idCounter = 0;                       // Tracks the next sequential number for assigning each ID (ID will never repeat)
-    mapping(string => bool) public collectionActive;    // Tracks the existing keys in poolNameToIds mapping (default value is FALSE for booleans)
-    mapping(string => bool) public awardActive;         // Tracks the existing keys in collectionAward mapping
-    mapping(uint256 => string) private IdsToPoolName;   // Records each ID as KEY and its corresponding collection name as VALUE
-                                                        // *** MESSAGE FOR TEAM: CAN EITHER CHANGE THE CARD STRUCT (ADD COLLECTION NAME VARIABLE) OR SET THIS REVERSED MAPPING ***
-
-    event AdminChanged(address indexed oldAdmin, address indexed newAdmin);     // Event to log the transfer of admin rights (optional)
-
 
     /** Admin creates a new collection by storing the card IDs and probabilities in two mappings corresponding to the collection name
      *  Input : The collection name and an array of each card's probability
@@ -407,9 +404,12 @@ contract PyramidCards is VRFConsumerBaseV2 {
     }
 
 
-    /** Admin can draw money from the contract      *** MESSAGE FOR TEAM: TBD, NOT SURE IF WE NEED THIS FUNCTION NOW ***
+    /** Admin can draw money from the contract
      */
-    function adminDrawMoney() public isAdmin {}
-
+    function adminDrawMoney() public isAdmin {
+        require(address(this).balance > 0, "The balance of this contract should be larger than 0");
+        (bool ok, ) = admin.call{value: address(this).balance}("");
+        require(ok, "Failed to withdraw ether to admin");
+    }
 
 }
