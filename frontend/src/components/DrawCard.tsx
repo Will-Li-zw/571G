@@ -13,7 +13,7 @@ import { drawCard } from '../store/interact';
 import Web3 from 'web3';
 // Define the DrawCard component
 export const DrawCard = () => {
-  const web3 = new Web3("wss://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");;
+  const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");;
   const dispatch = useDispatch();
   // Use useSelector to access necessary pieces of the Redux state
   const pools = useSelector((state: RootState) => state.pool);

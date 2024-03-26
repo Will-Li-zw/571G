@@ -6,9 +6,9 @@ import { Card, CardImageMap, PoolProbMap, RewardMap } from "../types"; // Adjust
 import { BigNumber } from "ethers";
 
 // Setup your Web3 instance and contract
-const web3 = new Web3("wss://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");
+const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");
 const contractABI = require('../artifacts/contracts/PyramidCards.sol/PyramidCards.json');
-const contractAddress = "0xf40d8321601154fF589e174a98Eaf598b675BD0a";
+const contractAddress = "0x93156C2F37cD6d1a9D390257697CCe48228d3814";
 const contract = new web3.eth.Contract(contractABI.abi, contractAddress);
 declare let ethereum: any;
 export async function addBalanceToContract( valueInEther: string, gasPrice = 'fast') {
@@ -103,19 +103,100 @@ export const getUserCollection = async (): Promise<{ id: number, quantity: numbe
         return []; // Return an empty array in case of error
     }
 };
-export const adminCreate = async (collectionName:string, awardName: string,  probs: number[], urls:string[]): Promise<number[]> => {
+export const adminCreate = async (collectionName: string, awardName: string, probs: number[], urls: string[]): Promise<number[]> => {
     try {
+        console.log(collectionName, awardName, probs, urls);
+
+        // Request accounts and use the first one
         const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
         const account = accounts[0];
-        const ids:any = await contract.methods.createCollections(collectionName, awardName, probs, urls).call({ from: account });
-        const result = ids.map((id:any)=> parseInt(id) )
-        console.log('Award set successfully');
-        return result
+
+        // Encode the function call
+        const data = contract.methods.createCollections(collectionName, awardName, probs, urls).encodeABI();
+
+        // Estimate gas for the transaction
+        const gasEstimate = await contract.methods.createCollections(collectionName, awardName, probs, urls).estimateGas({
+            from: account,
+        });
+
+        // Get current gas price from the network
+        const currentGasPrices = await ethereum.request({ method: 'eth_gasPrice' });
+
+        // Set up transaction parameters
+        const transactionParameters = {
+            to: contract.options.address, // Ensure you're using the correct contract address accessor based on your web3 version
+            from: account,
+            gas: web3.utils.toHex(gasEstimate), // Convert gas estimate to hex
+            gasPrice: web3.utils.toHex(currentGasPrices), // Use current gas price
+            data: data, // Encoded function call
+        };
+
+        // Send the transaction
+        const txHash = await ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [transactionParameters],
+        });
+        const pollForPoolCreatedEvent = async (startTime: number, timeout: number) => {
+            return new Promise((resolve, reject) => {
+                const interval = setInterval(async () => {
+                    const currentTime = new Date().getTime();
+                    if (currentTime - startTime > timeout) {
+                        console.log("Timeout reached, stopping event polling.");
+                        clearInterval(interval);
+                        reject(new Error("Event polling timed out."));
+                    }
+        
+                    // Adjust fromBlock and toBlock as needed, depending on your network and expected transaction confirmation time
+                    const events = await contract.getPastEvents('PoolCreated', {
+                        fromBlock: 'latest',
+                        toBlock: 'latest'
+                    });
+        
+                    if (events.length > 0) {
+                        console.log("Event found:", events);
+                        clearInterval(interval);
+                        resolve(events[0]); // Assuming you're interested in the first event found
+                    }
+                }, 5000); // Check every 5 seconds
+            });
+        };
+        
+        console.log("Transaction Hash:", txHash);
+        const startTime = new Date().getTime();
+        const timeout = 60000; // Set timeout (60 seconds in this example)
+        const event:any = await pollForPoolCreatedEvent(startTime, timeout);
+
+        // Handle event
+        console.log('Event Details:', event.returnValues.ids);
+        // return event.returnValues;
+        // Since we cannot directly get the function return value from a transaction, we would need to watch for the transaction to be mined
+        // and then use an event emitted by the contract (if available) to get the resultant IDs.
+        // For this example, we're assuming you need to adapt this part based on your contract's events and how you're handling them.
+        console.log('Collection creation initiated. Transaction Hash:', txHash);
+        
+        return event.returnValues.ids.map((id:any)=>parseInt(id)); // Placeholder return, adjust based on how you retrieve the result post-transaction.
     } catch (error) {
-        console.error('Failed to set award:', error);
-        throw new Error('Failed to set award');
+        console.error('Failed to create collection:', error);
+        throw new Error('Failed to create collection');
     }
 };
+
+// export const adminCreate = async (collectionName:string, awardName: string,  probs: number[], urls:string[]): Promise<number[]> => {
+//     try {
+//         console.log(collectionName,awardName,probs,urls)
+
+//         const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+//         const account = accounts[0];
+//         const ids:any = await contract.methods.createCollections(collectionName, awardName, probs, urls).call({ from: account });
+//         const result = ids.map((id:any)=> parseInt(id) )
+//         console.log(result,"ADmin create IDS")
+//         console.log('Award set successfully');
+//         return result
+//     } catch (error) {
+//         console.error('Failed to set award:', error);
+//         throw new Error('Failed to set award');
+//     }
+// };
 export const getAllCollections = async (): Promise<any> => {
     interface PoolData {
         id: number;
@@ -128,9 +209,10 @@ export const getAllCollections = async (): Promise<any> => {
         const account = accounts[0];
         
         // Destructuring the result into respective arrays
-        // const respond:any= await contract.methods.getAllCollections(account).call();
-        const respond = {0:['pool1', 'pool2', 'pool3'],1:[1, 2, 3, 3, 1, 2],2:[0.5, 0.5, 1, 0.3, 0.2, 0.5],3:[2, 1, 3]}
+        const respond:any= await contract.methods.getAllCollections().call({from:account});
+        // const respond = {0:['pool1', 'pool2', 'pool3'],1:[1, 2, 3, 3, 1, 2],2:[0.5, 0.5, 1, 0.3, 0.2, 0.5],3:[2, 1, 3]}
         // const {poolNameArray, idArray, probArray, lensArray }  = respond
+        console.log("ALLCOLLECTION", respond);
         const poolNameArray = respond[0];
         const idArray = respond[1];
         const probArray = respond[2];

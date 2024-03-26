@@ -46,11 +46,11 @@ export const AdminPage = () => {
     const startingId = Object.keys(cardImageMap).reduce((maxId, currentId) => Math.max(maxId, parseInt(currentId, 10)), 0) + 1;
 
     try {
-      await adminCreate(collectorName, awardName, cards.map(card => parseInt(card.prob)*100), cards.map(card => card.url));
+      const cardIds = await adminCreate(collectorName, awardName, cards.map(card => parseFloat(card.prob)*100), cards.map(card => card.url));
       // // Assuming each card quantity is 1 for simplicity
       // const awardCards = cards.map((card, index) => ({ id: index + 100, quantity: 1 })); // Example ID logic
       // await setCollectionAward(awardName, awardCards);
-      const cardIds = cards.map((_, index) => index + 100); // Mock IDs as incremental numbers
+      // const cardIds = cards.map((_, index) => index + 100); // Mock IDs as incremental numbers
       
       // Dispatch updates to Redux
       dispatch(setRewardMap({...storeContent, [awardName]: cardIds.map(id => ({ id, quantity: 1 })) }));
