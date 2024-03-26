@@ -95,7 +95,7 @@ export const getUserCollection = async (): Promise<{ id: number, quantity: numbe
               { id: 1, quantity: 30 },
               { id: 2, quantity: 22 },
               { id: 3, quantity: 11 },
-            ];
+        ];
 
     } catch (error) {
         console.log(error)
@@ -103,77 +103,181 @@ export const getUserCollection = async (): Promise<{ id: number, quantity: numbe
         return []; // Return an empty array in case of error
     }
 };
-export const adminCreate = async (collectionName:string, awardName: string,  probs: number[], urls:string[]): Promise<void> => {
+export const adminCreate = async (collectionName:string, awardName: string,  probs: number[], urls:string[]): Promise<number[]> => {
     try {
         const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
         const account = accounts[0];
-        await contract.methods.NNNNNNNNN(collectionName, awardName, probs, urls).call({ from: account });
+        const ids:any = await contract.methods.createCollections(collectionName, awardName, probs, urls).call({ from: account });
+        const result = ids.map((id:any)=> parseInt(id) )
         console.log('Award set successfully');
+        return result
     } catch (error) {
         console.error('Failed to set award:', error);
         throw new Error('Failed to set award');
     }
 };
-
 export const getAllCollections = async (): Promise<any> => {
+    interface PoolData {
+        id: number;
+        prob: number;
+    }
     try {
-    console.log("getAllCollections")
-    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-    const account = accounts[0];
-    // const collections:any = await contract.methods.getAllCollections(account).call();
-    // console.log(parseInt(myBalance),"Inside Balance")
-    return {
-        'Pool1': [
-          { id: 1, prob: 0.5 },
-          { id: 2, prob: 0.3 },
-          { id: 3, prob: 0.2 },
-        ],
-        'Pool2': [
-          { id: 1, prob: 0.5 },
-          { id: 3, prob: 0.5 },
-        ],
-        // ... other pool data
-      };
+        console.log("getAllCollections")
+        // Requesting the user's Ethereum account
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
+        
+        // Destructuring the result into respective arrays
+        // const respond:any= await contract.methods.getAllCollections(account).call();
+        const respond = {0:['pool1', 'pool2', 'pool3'],1:[1, 2, 3, 3, 1, 2],2:[0.5, 0.5, 1, 0.3, 0.2, 0.5],3:[2, 1, 3]}
+        // const {poolNameArray, idArray, probArray, lensArray }  = respond
+        const poolNameArray = respond[0];
+        const idArray = respond[1];
+        const probArray = respond[2];
+        const lensArray = respond[3];
+        console.log(poolNameArray)
+        let result: { [key: string]: PoolData[] } = {}; // This object will store the final structure
+        let currentIndex = 0; // This will keep track of our current position in the idArray and probArray
+
+        // Iterating through each pool name
+        for (let i = 0; i < poolNameArray.length; i++) {
+            const poolName = poolNameArray[i];
+            console.log(poolName)
+            const poolSize = lensArray[i]; // The number of records in the current pool
+            const poolData = []; // This array will store the id and prob for the current pool
+
+            // Iterating through the number of items in the current pool
+            for (let j = 0; j < poolSize; j++) {
+                poolData.push({
+                    id: idArray[currentIndex + j],
+                    prob: probArray[currentIndex + j],
+                });
+            }
+
+            // Adding the current pool's data to the result object
+            result[poolName] = poolData;
+
+            // Updating currentIndex to move to the next set of ids and probs for the next pool
+            currentIndex += poolSize;
+        }
+        console.log("GETTTTTTTT",result)
+        return result;
     } catch (error) {
-        console.log(error)
+        console.log(error);
         throw error;
     }
-    return 0;
+};
+export const getAllRewards = async (): Promise<any> => {
+    interface PoolData {
+        id: number;
+        quantity: number;
+    }
+    try {
+        console.log("getAllCollections")
+        // Requesting the user's Ethereum account
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
+        
+        // Destructuring the result into respective arrays
+        // const respond:any= await contract.methods.getAllCollections(account).call();
+        const respond = {0:['Reward1', 'Reward2', 'Reward3'],1:[1, 2, 3, 3, 1, 2],2:[1, 1, 1, 10, 10, 10],3:[2, 1, 3]}
+        // const {poolNameArray, idArray, probArray, lensArray }  = respond
+        const rewardNameArray = respond[0];
+        const idArray = respond[1];
+        const quantityArray = respond[2];
+        const lensArray = respond[3];
+        console.log(rewardNameArray)
+        let result: { [key: string]: PoolData[] } = {}; // This object will store the final structure
+        let currentIndex = 0; // This will keep track of our current position in the idArray and probArray
+
+        // Iterating through each pool name
+        for (let i = 0; i < rewardNameArray.length; i++) {
+            const rewardName = rewardNameArray[i];
+            console.log(rewardName)
+            const poolSize = lensArray[i]; // The number of records in the current pool
+            const poolData = []; // This array will store the id and prob for the current pool
+
+            // Iterating through the number of items in the current pool
+            for (let j = 0; j < poolSize; j++) {
+                poolData.push({
+                    id: idArray[currentIndex + j],
+                    quantity: quantityArray[currentIndex + j],
+                });
+            }
+
+            // Adding the current pool's data to the result object
+            result[rewardName] = poolData;
+
+            // Updating currentIndex to move to the next set of ids and probs for the next pool
+            currentIndex += poolSize;
+        }
+        console.log("GETTTTTTTT",result)
+        return result;
+    } catch (error) {
+        console.log(error);
+        throw error;
+    }
 };
 
-export const getAllRewards = async (): Promise<any> => {
-    try {
-    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-    const account = accounts[0];
-    // const rewards:any = await contract.methods.getAllRewards(account).call();
-    return {
-        'Reward1': [
-          { id: 1, quantity: 1 },
-          { id: 2, quantity: 1 },
-        ],
-        'Reward2': [
-          { id: 3, quantity: 1 },
-        ],
-        'Reward3': [
-          { id: 3, quantity: 10 },
-          { id: 1, quantity: 10 },
-          { id: 2, quantity: 10 },
+// export const getAllRewards = async (): Promise<any> => {
+//     try {
+//     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+//     const account = accounts[0];
+//     // const rewards:any = await contract.methods.getAllRewards(account).call();
+//     return {
+//         'Reward1': [
+//           { id: 1, quantity: 1 },
+//           { id: 2, quantity: 1 },
+//         ],
+//         'Reward2': [
+//           { id: 3, quantity: 1 },
+//         ],
+//         'Reward3': [
+//           { id: 3, quantity: 10 },
+//           { id: 1, quantity: 10 },
+//           { id: 2, quantity: 10 },
   
-        ],
-        // ... other reward data
-      };
-    } catch (error) {
-        console.log(error)
-        throw error;
-    }
-    return 0;
-};
+//         ],
+//         // ... other reward data
+//       };
+//     } catch (error) {
+//         console.log(error)
+//         throw error;
+//     }
+//     return 0;
+// };
 
 export const getURLMap= async (): Promise<any> => {
     try {
     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
     const account = accounts[0];
-    // const rewards:any = await contract.methods.getAllRewards(account).call();
+    // const rewards:any = await contract.methods.getAllURLs().call({from:account});
+    // const userData:any = await contract.methods.getAllURLs().call();
+    // const ids = userData[0];
+    // const urls = userData[1];
+    // console.log("ids",ids)
+    // console.log("urls",urls)
+    // // Transform the arrays into the desired format
+    // let result = {}
+    // ids.map((id: number, index: string | number) => ({
+    //     result[id] = 
+    // }));
+    // Assuming ids and urls are already defined as shown in your snippet:
+    const userData = {0:[1,2,3],1:["https://i.postimg.cc/3RXLFz5z/163111-1710059471b82d.jpg","a.jpg","a.jpg" ]}
+    const ids = userData[0];
+    const urls = userData[1];
+
+    // Initialize an empty object to store the mapping
+    let result: { [key: string]: string } = {};
+
+    // Loop through the ids array and build the map
+    ids.forEach((id, index) => {
+    // Use the current id as the key and the corresponding url as the value
+    result[id] = urls[index];
+    });
+
+    console.log(result);
+
     return {
         1:'https://i.postimg.cc/3RXLFz5z/163111-1710059471b82d.jpg',
         2:'https://i.postimg.cc/fR41mGPj/194048-1710070848523b.jpg',
@@ -208,10 +312,28 @@ export const redeemCard = async (id:number): Promise<any> => {
     console.log(response)
     // return parseInt(drawnCard)
     } catch (error) {
-        console.log("WHY??????")
+        // console.log("WHY??????")
         
         console.log(error)
         throw error;
     }
     return 0;
 };
+
+
+export const checkAdmin = async (): Promise<any> => {
+    try {
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts[0];
+    const result = await contract.methods.accountIsAdmin().call({ from: account });
+    console.log("checkAdmine", result);
+    return result
+    // return parseInt(drawnCard)
+    } catch (error) {
+        
+        console.log("Check Admine", error)
+        throw error;
+    }
+    return 0;
+};
+

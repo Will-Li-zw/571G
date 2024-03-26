@@ -8,6 +8,7 @@ import { AppBar, Toolbar, Typography, Button, Box, Grid, Container } from '@mui/
 import { useWeb3React } from '@web3-react/core';
 import { WalletStatus } from './WalletStatus';
 import AdminPage from './AdminPage';
+import { checkAdmin } from '../store/interact';
 
 export const HomePage = () => {
   const { deactivate } = useWeb3React();
@@ -19,11 +20,11 @@ export const HomePage = () => {
     const checkAdminStatus = async () => {
       // Here you would typically fetch the user's role from the backend
       // For this example, let's assume a mock function that checks the address
-      const adminAddress = ""; // Example admin address
-      const userAddress = ""; // Placeholder for actual user address logic
-      setIsAdmin(userAddress === adminAddress);
+      const isAdmine = await checkAdmin()
+      // const adminAddress = ""; // Example admin address
+      // const userAddress = ""; // Placeholder for actual user address logic
+      setIsAdmin(isAdmine);
     };
-
     checkAdminStatus();
   }, []);
   const handleSignOut = () => {
