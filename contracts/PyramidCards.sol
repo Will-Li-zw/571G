@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
-import "hardhat/console.sol";   // TODO: delete this console import
 
 contract PyramidCards is VRFConsumerBaseV2 {
     struct Card {
@@ -74,6 +73,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
 
     // ============================================== Events ==============================================
     event AdminChanged(address indexed oldAdmin, address indexed newAdmin); // Event to log the transfer of admin rights (optional)
+    event CardRequest(address indexed owner, uint256 requestId);
     event CardDraw(address indexed owner, uint256 id); // Event to log which card is drawn
     event PoolCreated(address indexed admin, uint256[] ids); // Event to log pool
     event CardRedeemed(address indexed owner, uint256 id, uint256 balance);  // Event to log user redeem and new balance
@@ -220,6 +220,8 @@ contract PyramidCards is VRFConsumerBaseV2 {
             i_gasLane, i_subscriptionId, REQEUST_CONFIRMATIONS, i_callBackGasLimit, NOM_WORDS
         );
 
+        emit CardRequest(msg.sender, requestId);
+
         s_requestIdToSender[requestId] = msg.sender; // record requestId to address
         s_requestIdToCollection[requestId] = collection; // record requestId to collection we want to draw
     }
@@ -232,16 +234,13 @@ contract PyramidCards is VRFConsumerBaseV2 {
         // calculate the drawn card based on rng returned from VRFCoordinatorV2
         uint256 rng = randomWords[0] % MAX_CHANCE_VALUE;
         uint256 cardIndex = getCardIdFromRng(rng, collection);
-        console.log("Random card index is: ", cardIndex);
         uint256 cardId = poolNameToIds[collection][cardIndex];
-        console.log("Random card id is: ", cardId);
 
         // emit the event of drawed card
         emit CardDraw(cardOwner, cardId);
 
         // user draw this card
         // if this card already be possessed?
-        console.log("User currently has: ", userCollection[cardOwner].length);
         for (uint256 i = 0; i < userCollection[cardOwner].length; i++) {
             if (userCollection[cardOwner][i].id == cardId) {
                 userCollection[cardOwner][i].quantity += 1;
@@ -299,7 +298,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
             idCounter++; // Let ID start from 1
             poolNameToIds[name].push(idCounter); // Increase the size of the array and add the IDs
             poolNameToProbabilities[name].push(probabilities[i]); // Increase the size of the array and add the probabilities
-            IdsToUrls[i] = urls[i]; // Record the url of the image
+            IdsToUrls[idCounter] = urls[i]; // Record the url of the image
             collectionAward[awardName].push(Card({id: idCounter, quantity: 1}));
             idArray.push(idCounter);
             probArray.push(probabilities[i]);
@@ -330,7 +329,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
     
     // front-end method to get all urls with ids one-to-one
     function getAllURLs() external view returns (uint256[] memory, string[] memory) {
-        string[] memory result_urls;
+        string[] memory result_urls = new string[](idArray.length);
         for (uint256 i = 0; i < idArray.length; i++) {
             string memory url = IdsToUrls[idArray[i]];
             result_urls[i] = url;

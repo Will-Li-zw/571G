@@ -8,7 +8,7 @@ import { BigNumber } from "ethers";
 // Setup your Web3 instance and contract
 const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");
 const contractABI = require('../artifacts/contracts/PyramidCards.sol/PyramidCards.json');
-const contractAddress = "0x93156C2F37cD6d1a9D390257697CCe48228d3814";
+const contractAddress = "0x98cE68b3415c0D853CD114B48A72A9C8500C1428";
 const contract = new web3.eth.Contract(contractABI.abi, contractAddress);
 declare let ethereum: any;
 export async function addBalanceToContract( valueInEther: string, gasPrice = 'fast') {
@@ -68,7 +68,6 @@ export const getBalance = async (): Promise<number> => {
     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
     const account = accounts[0];
     const myBalance:any = await contract.methods.getUserBalances(account).call();
-    // console.log(parseInt(myBalance),"Inside Balance")
     return parseInt(myBalance);
     } catch (error) {
         console.log(error)
@@ -80,9 +79,11 @@ export const getUserCollection = async (): Promise<{ id: number, quantity: numbe
     try {
         const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
         const account = accounts[0];
-        const userData:any = await contract.methods.getUserCollection(account).call();
-        const ids = userData[0];
-        const quantities = userData[1];
+        const userData:any = await contract.methods.getUserCollection(account).call({from:account});
+        console.log("getUserCollection", account)
+        console.log("getUserCollection", userData)
+        const ids = userData[0].map((x: any)=>parseInt(x));
+        const quantities = userData[1].map((x: any)=>parseInt(x));
         console.log("ids",ids)
         console.log("quantities",quantities)
         // Transform the arrays into the desired format
@@ -91,16 +92,11 @@ export const getUserCollection = async (): Promise<{ id: number, quantity: numbe
             quantity: parseInt(quantities[index]),
         }));
 
-        return [
-              { id: 1, quantity: 30 },
-              { id: 2, quantity: 22 },
-              { id: 3, quantity: 11 },
-        ];
+        return transformedData
 
     } catch (error) {
         console.log(error)
         throw error;
-        return []; // Return an empty array in case of error
     }
 };
 export const adminCreate = async (collectionName: string, awardName: string, probs: number[], urls: string[]): Promise<number[]> => {
@@ -181,22 +177,6 @@ export const adminCreate = async (collectionName: string, awardName: string, pro
     }
 };
 
-// export const adminCreate = async (collectionName:string, awardName: string,  probs: number[], urls:string[]): Promise<number[]> => {
-//     try {
-//         console.log(collectionName,awardName,probs,urls)
-
-//         const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-//         const account = accounts[0];
-//         const ids:any = await contract.methods.createCollections(collectionName, awardName, probs, urls).call({ from: account });
-//         const result = ids.map((id:any)=> parseInt(id) )
-//         console.log(result,"ADmin create IDS")
-//         console.log('Award set successfully');
-//         return result
-//     } catch (error) {
-//         console.error('Failed to set award:', error);
-//         throw new Error('Failed to set award');
-//     }
-// };
 export const getAllCollections = async (): Promise<any> => {
     interface PoolData {
         id: number;
@@ -214,17 +194,15 @@ export const getAllCollections = async (): Promise<any> => {
         // const {poolNameArray, idArray, probArray, lensArray }  = respond
         console.log("ALLCOLLECTION", respond);
         const poolNameArray = respond[0];
-        const idArray = respond[1];
-        const probArray = respond[2];
-        const lensArray = respond[3];
-        console.log(poolNameArray)
+        const idArray = respond[1].map((x: any)=>parseInt(x));
+        const probArray = respond[2].map((x: any)=>parseInt(x));
+        const lensArray = respond[3].map((x: any)=>parseInt(x));
         let result: { [key: string]: PoolData[] } = {}; // This object will store the final structure
         let currentIndex = 0; // This will keep track of our current position in the idArray and probArray
 
         // Iterating through each pool name
         for (let i = 0; i < poolNameArray.length; i++) {
             const poolName = poolNameArray[i];
-            console.log(poolName)
             const poolSize = lensArray[i]; // The number of records in the current pool
             const poolData = []; // This array will store the id and prob for the current pool
 
@@ -242,7 +220,7 @@ export const getAllCollections = async (): Promise<any> => {
             // Updating currentIndex to move to the next set of ids and probs for the next pool
             currentIndex += poolSize;
         }
-        console.log("GETTTTTTTT",result)
+        console.log("getAllCollections",result)
         return result;
     } catch (error) {
         console.log(error);
@@ -255,27 +233,23 @@ export const getAllRewards = async (): Promise<any> => {
         quantity: number;
     }
     try {
-        console.log("getAllCollections")
+        console.log("getAllRewards")
         // Requesting the user's Ethereum account
         const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
         const account = accounts[0];
         
         // Destructuring the result into respective arrays
-        // const respond:any= await contract.methods.getAllCollections(account).call();
-        const respond = {0:['Reward1', 'Reward2', 'Reward3'],1:[1, 2, 3, 3, 1, 2],2:[1, 1, 1, 10, 10, 10],3:[2, 1, 3]}
-        // const {poolNameArray, idArray, probArray, lensArray }  = respond
+        const respond:any= await contract.methods.getAllRewards({from:account}).call();
         const rewardNameArray = respond[0];
-        const idArray = respond[1];
-        const quantityArray = respond[2];
-        const lensArray = respond[3];
-        console.log(rewardNameArray)
+        const idArray = respond[1].map((x: any)=>parseInt(x));
+        const quantityArray = respond[2].map((x: any)=>parseInt(x));
+        const lensArray = respond[3].map((x: any)=>parseInt(x));
         let result: { [key: string]: PoolData[] } = {}; // This object will store the final structure
         let currentIndex = 0; // This will keep track of our current position in the idArray and probArray
 
         // Iterating through each pool name
         for (let i = 0; i < rewardNameArray.length; i++) {
             const rewardName = rewardNameArray[i];
-            console.log(rewardName)
             const poolSize = lensArray[i]; // The number of records in the current pool
             const poolData = []; // This array will store the id and prob for the current pool
 
@@ -287,13 +261,10 @@ export const getAllRewards = async (): Promise<any> => {
                 });
             }
 
-            // Adding the current pool's data to the result object
             result[rewardName] = poolData;
-
-            // Updating currentIndex to move to the next set of ids and probs for the next pool
             currentIndex += poolSize;
         }
-        console.log("GETTTTTTTT",result)
+        console.log("getAllRewards",result)
         return result;
     } catch (error) {
         console.log(error);
@@ -301,75 +272,30 @@ export const getAllRewards = async (): Promise<any> => {
     }
 };
 
-// export const getAllRewards = async (): Promise<any> => {
-//     try {
-//     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-//     const account = accounts[0];
-//     // const rewards:any = await contract.methods.getAllRewards(account).call();
-//     return {
-//         'Reward1': [
-//           { id: 1, quantity: 1 },
-//           { id: 2, quantity: 1 },
-//         ],
-//         'Reward2': [
-//           { id: 3, quantity: 1 },
-//         ],
-//         'Reward3': [
-//           { id: 3, quantity: 10 },
-//           { id: 1, quantity: 10 },
-//           { id: 2, quantity: 10 },
-  
-//         ],
-//         // ... other reward data
-//       };
-//     } catch (error) {
-//         console.log(error)
-//         throw error;
-//     }
-//     return 0;
-// };
-
 export const getURLMap= async (): Promise<any> => {
     try {
     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
     const account = accounts[0];
-    // const rewards:any = await contract.methods.getAllURLs().call({from:account});
-    // const userData:any = await contract.methods.getAllURLs().call();
-    // const ids = userData[0];
-    // const urls = userData[1];
-    // console.log("ids",ids)
-    // console.log("urls",urls)
-    // // Transform the arrays into the desired format
-    // let result = {}
-    // ids.map((id: number, index: string | number) => ({
-    //     result[id] = 
-    // }));
-    // Assuming ids and urls are already defined as shown in your snippet:
-    const userData = {0:[1,2,3],1:["https://i.postimg.cc/3RXLFz5z/163111-1710059471b82d.jpg","a.jpg","a.jpg" ]}
-    const ids = userData[0];
+    const userData:any = await contract.methods.getAllURLs().call({from:account});
+    const ids = userData[0].map((x: any)=>parseInt(x));
     const urls = userData[1];
 
     // Initialize an empty object to store the mapping
     let result: { [key: string]: string } = {};
 
     // Loop through the ids array and build the map
-    ids.forEach((id, index) => {
+    ids.forEach((id: number, index:number) => {
     // Use the current id as the key and the corresponding url as the value
     result[id] = urls[index];
     });
+    console.log("userRaw", userData);
+    console.log("getURLMap", result);
 
-    console.log(result);
-
-    return {
-        1:'https://i.postimg.cc/3RXLFz5z/163111-1710059471b82d.jpg',
-        2:'https://i.postimg.cc/fR41mGPj/194048-1710070848523b.jpg',
-        3:'https://i.postimg.cc/rFTPp1RQ/TEC3-L07-N0965-lead-720x1280.png',
-    }
+    return result
     } catch (error) {
         console.log(error)
         throw error;
     }
-    return 0;
 };
 
 export const drawCard = async (collection:string): Promise<number> => {
@@ -377,12 +303,67 @@ export const drawCard = async (collection:string): Promise<number> => {
     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
     const account = accounts[0];
     const drawnCard:any = await contract.methods.drawRandomCard(collection).call({ from: account });
-    return parseInt(drawnCard)
-    } catch (error) {
-        console.log(error)
-        throw error;
-    }
-    return 0;
+
+    // Encode the function call
+    const data = contract.methods.drawRandomCard(collection).encodeABI();
+
+    // Estimate gas for the transaction
+    const gasEstimate = await contract.methods.drawRandomCard(collection).estimateGas({
+        from: account,
+    });
+
+    // Get current gas price from the network
+    const currentGasPrices = await ethereum.request({ method: 'eth_gasPrice' });
+
+    // Set up transaction parameters
+    const transactionParameters = {
+        to: contract.options.address, // Ensure you're using the correct contract address accessor based on your web3 version
+        from: account,
+        gas: web3.utils.toHex(gasEstimate), // Convert gas estimate to hex
+        gasPrice: web3.utils.toHex(currentGasPrices), // Use current gas price
+        data: data, // Encoded function call
+    };
+
+    // Send the transaction
+    const txHash = await ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [transactionParameters],
+    });
+    const pollForCardDrawEvent = async (startTime: number, timeout: number) => {
+        return new Promise((resolve, reject) => {
+            const interval = setInterval(async () => {
+                const currentTime = new Date().getTime();
+                if (currentTime - startTime > timeout) {
+                    console.log("Timeout reached, stopping event polling.");
+                    clearInterval(interval);
+                    reject(new Error("Event polling timed out."));
+                }
+    
+                // Adjust fromBlock and toBlock as needed, depending on your network and expected transaction confirmation time
+                const events = await contract.getPastEvents('CardDraw', {
+                    fromBlock: 'latest',
+                    toBlock: 'latest'
+                });
+    
+                if (events.length > 0) {
+                    console.log("Event found:", events);
+                    clearInterval(interval);
+                    resolve(events[0]); // Assuming you're interested in the first event found
+                }
+            }, 5000); // Check every 5 seconds
+        });
+    };
+    
+    console.log("Transaction Hash:", txHash);
+    const startTime = new Date().getTime();
+    const timeout = 60000; // Set timeout (60 seconds in this example)
+    const event:any = await pollForCardDrawEvent(startTime, timeout);
+    console.log("DRAWCARD RESULT", event.returnValues.cardId)
+    return parseInt(event.returnValues.cardId) // Placeholder return, adjust based on how you retrieve the result post-transaction.
+} catch (error) {
+    console.error('Failed to create collection:', error);
+    throw new Error('Failed to create collection');
+}
 };
 
 
@@ -416,6 +397,5 @@ export const checkAdmin = async (): Promise<any> => {
         console.log("Check Admine", error)
         throw error;
     }
-    return 0;
 };
 

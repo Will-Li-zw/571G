@@ -7,7 +7,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 const vrfCoordinatorV2 = process.env.COR_ADDRESS || '';
 const subscriptionId = process.env.SUB_ID || '';
-const callBackGasLimit = "500000" || '';
+const callBackGasLimit = "1000000" || '';
 const gasLane = process.env.GAS_LANE || '';
 
 task('deploy', 'Deploy Greeter contract').setAction(
