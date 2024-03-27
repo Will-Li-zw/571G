@@ -67,6 +67,7 @@ export const DrawCard = () => {
       let drawnCardId = 0;
       try {
         drawnCardId = await drawCard(selectedPool);
+        alert("Congratulation, You have drawn the card:"+drawnCardId )
       } catch (error) {
         console.log("API FAIL")
         alert("Draw API card failed");

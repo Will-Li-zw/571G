@@ -8,7 +8,7 @@ import { BigNumber } from "ethers";
 // Setup your Web3 instance and contract
 const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");
 const contractABI = require('../artifacts/contracts/PyramidCards.sol/PyramidCards.json');
-const contractAddress = "0x98cE68b3415c0D853CD114B48A72A9C8500C1428";
+const contractAddress = "0x030C467a80c1F237c0621DbE62fb772C4c26C809";
 const contract = new web3.eth.Contract(contractABI.abi, contractAddress);
 declare let ethereum: any;
 export async function addBalanceToContract( valueInEther: string, gasPrice = 'fast') {
@@ -159,7 +159,7 @@ export const adminCreate = async (collectionName: string, awardName: string, pro
         
         console.log("Transaction Hash:", txHash);
         const startTime = new Date().getTime();
-        const timeout = 60000; // Set timeout (60 seconds in this example)
+        const timeout = 600000; // Set timeout (60 seconds in this example)
         const event:any = await pollForPoolCreatedEvent(startTime, timeout);
 
         // Handle event
@@ -348,7 +348,7 @@ export const drawCard = async (collection:string): Promise<number> => {
                 if (events.length > 0) {
                     console.log("Event found:", events);
                     clearInterval(interval);
-                    resolve(events[0]); // Assuming you're interested in the first event found
+                    resolve(events[2]); // Assuming you're interested in the first event found
                 }
             }, 5000); // Check every 5 seconds
         });
@@ -356,10 +356,10 @@ export const drawCard = async (collection:string): Promise<number> => {
     
     console.log("Transaction Hash:", txHash);
     const startTime = new Date().getTime();
-    const timeout = 60000; // Set timeout (60 seconds in this example)
+    const timeout = 600000; // Set timeout (60 seconds in this example)
     const event:any = await pollForCardDrawEvent(startTime, timeout);
     console.log("DRAWCARD RESULT", event.returnValues.cardId)
-    return parseInt(event.returnValues.cardId) // Placeholder return, adjust based on how you retrieve the result post-transaction.
+    return parseInt(event.returnValues.id) // Placeholder return, adjust based on how you retrieve the result post-transaction.
 } catch (error) {
     console.error('Failed to create collection:', error);
     throw new Error('Failed to create collection');
@@ -367,21 +367,7 @@ export const drawCard = async (collection:string): Promise<number> => {
 };
 
 
-export const redeemCard = async (id:number): Promise<any> => {
-    try {
-    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-    const account = accounts[0];
-    const response = await contract.methods.redeemChance(id).call({ from: account });
-    console.log(response)
-    // return parseInt(drawnCard)
-    } catch (error) {
-        // console.log("WHY??????")
-        
-        console.log(error)
-        throw error;
-    }
-    return 0;
-};
+
 
 
 export const checkAdmin = async (): Promise<any> => {
@@ -399,3 +385,87 @@ export const checkAdmin = async (): Promise<any> => {
     }
 };
 
+export const redeemAward = async ( awardName: string): Promise<any> => {
+    try {
+        console.log("Start Redeem Award", awardName)
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
+
+        // Encode the function call
+        const data = contract.methods.redeemAward( awardName).encodeABI();
+
+        // Estimate gas for the transaction
+        const gasEstimate = await contract.methods.redeemAward(awardName).estimateGas({
+            from: account,
+        });
+
+        // Get current gas price from the network
+        const currentGasPrices = await ethereum.request({ method: 'eth_gasPrice' });
+
+        // Set up transaction parameters
+        const transactionParameters = {
+            to: contract.options.address, // Ensure you're using the correct contract address accessor based on your web3 version
+            from: account,
+            gas: web3.utils.toHex(gasEstimate), // Convert gas estimate to hex
+            gasPrice: web3.utils.toHex(currentGasPrices), // Use current gas price
+            data: data, // Encoded function call
+        };
+
+        // Send the transaction
+        const txHash = await ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [transactionParameters],
+        });
+        
+        // return event.returnValues;
+        // Since we cannot directly get the function return value from a transaction, we would need to watch for the transaction to be mined
+        // and then use an event emitted by the contract (if available) to get the resultant IDs.
+        // For this example, we're assuming you need to adapt this part based on your contract's events and how you're handling them.
+        console.log('Award redeem initiated. Transaction Hash:', txHash);
+        
+        return txHash; // Placeholder return, adjust based on how you retrieve the result post-transaction.
+    } catch (error) {
+        console.error('Failed to create collection:', error);
+        throw new Error('Failed to create collection');
+    }
+};
+
+export const redeemChance = async ( id: number): Promise<any> => {
+    try {
+        console.log("Start Redeem Card", id)
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
+
+        // Encode the function call
+        const data = contract.methods.redeemChance( id).encodeABI();
+
+        // Estimate gas for the transaction
+        const gasEstimate = await contract.methods.redeemChance(id).estimateGas({
+            from: account,
+        });
+
+        // Get current gas price from the network
+        const currentGasPrices = await ethereum.request({ method: 'eth_gasPrice' });
+
+        // Set up transaction parameters
+        const transactionParameters = {
+            to: contract.options.address, // Ensure you're using the correct contract address accessor based on your web3 version
+            from: account,
+            gas: web3.utils.toHex(gasEstimate), // Convert gas estimate to hex
+            gasPrice: web3.utils.toHex(currentGasPrices), // Use current gas price
+            data: data, // Encoded function call
+        };
+
+        // Send the transaction
+        const txHash = await ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [transactionParameters],
+        });
+        console.log('Award redeem initiated. Transaction Hash:', txHash);
+        
+        return txHash; // Placeholder return, adjust based on how you retrieve the result post-transaction.
+    } catch (error) {
+        console.error('Failed to create collection:', error);
+        throw new Error('Failed to create collection');
+    }
+};

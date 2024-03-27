@@ -4,6 +4,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Grid, Card, CardActionArea, CardActions, CardContent, Button, Typography, CardMedia, Box } from '@mui/material';
 import { setCollection } from '../store/userSlice'; // Adjust the import path as necessary
 import { RootState } from '../store/store';
+import { redeemAward } from '../store/interact';
+import Web3 from 'web3';
 
 export interface RewardMap {
   [rewardName: string]: { id: number; quantity: number }[];
@@ -11,11 +13,13 @@ export interface RewardMap {
 
 export const Store = () => {
   const dispatch = useDispatch();
+  const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");;
+
   const userCollection = useSelector((state: RootState) => state.user.collection);
   const storeContent: RewardMap = useSelector((state: RootState) => state.reward);
   const cardImage = useSelector((state: RootState) => state.cardImageMap);
 
-  const redeemAward = async (rewardName: string) => {
+  const redeemClick = async (rewardName: string) => {
     const awards = storeContent[rewardName];
     if (!awards) return;
 
@@ -26,18 +30,39 @@ export const Store = () => {
 
     if (canRedeem) {
       // Simulate an API call
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Mock API call delay
+      try {
+        const waitForTransactionReceipt = async (hash: any) => {
+          let receipt = null;
+          while (receipt === null) { // Polling for receipt
+            try {
+              receipt = await web3.eth.getTransactionReceipt(hash);
+              // Wait for a short period before polling again to avoid rate limits
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            } catch (error) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              console.error('Error fetching transaction receipt: ', error);
+            }
+          }
+          return receipt;
+        };
+        console.log("Page redeem", rewardName)
+        const hex = await redeemAward(rewardName); // Mock API call delay
+        await waitForTransactionReceipt(hex);
+        const updatedCollection = userCollection.map(userCard => {
+          const awardToRedeem = awards.find(a => a.id === userCard.id);
+          if (awardToRedeem) {
+            return { ...userCard, quantity: userCard.quantity - awardToRedeem.quantity };
+          }
+          return userCard;
+        });
+  
+        dispatch(setCollection(updatedCollection));
+        alert('Award redeemed successfully!');
+      } catch (error) {
+        alert('Award redeemed failed'+error);
+        
+      }
 
-      const updatedCollection = userCollection.map(userCard => {
-        const awardToRedeem = awards.find(a => a.id === userCard.id);
-        if (awardToRedeem) {
-          return { ...userCard, quantity: userCard.quantity - awardToRedeem.quantity };
-        }
-        return userCard;
-      });
-
-      dispatch(setCollection(updatedCollection));
-      alert('Award redeemed successfully!');
     } else {
       alert('Insufficient cards to redeem this award.');
     }
@@ -77,7 +102,7 @@ export const Store = () => {
             ))}
             <CardActions>
               <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                <Button variant="contained" color="primary" onClick={() => redeemAward(rewardName)}>
+                <Button variant="contained" color="primary" onClick={() => redeemClick(rewardName)}>
                   Redeem
                 </Button>
               </Box>

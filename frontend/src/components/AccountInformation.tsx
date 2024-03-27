@@ -3,8 +3,9 @@ import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Typography, Card, CardContent, CardMedia, Grid, CircularProgress, Button } from '@mui/material';
 import { RootState } from '../store/store';
-import { redeemCard } from '../store/interact';
+import { redeemChance } from '../store/interact';
 import { setCollection, setRemainingDraws } from '../store/userSlice';
+import { Web3 } from 'web3';
 
 const AccountInformation = () => {
   const { remainingDraws, collection } = useSelector((state: RootState) => state.user);
@@ -12,19 +13,31 @@ const AccountInformation = () => {
   const account = useSelector((state: RootState) => state.user.address);
   const dispatch = useDispatch();
   const userCollection = useSelector((state: RootState) => state.user.collection);
+  const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");
 
   const handleCardButtonClick = async(cardId: number) => {
     // This function will be called when the button under a card is clicked.
     // You can replace the alert with any other functionality you need.
     try {
-
-      const respond = await redeemCard(cardId)
-      console.log("Function ID",cardId)
+      const waitForTransactionReceipt = async (hash: any) => {
+        let receipt = null;
+        while (receipt === null) { // Polling for receipt
+          try {
+            receipt = await web3.eth.getTransactionReceipt(hash);
+            // Wait for a short period before polling again to avoid rate limits
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } catch (error) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            console.error('Error fetching transaction receipt: ', error);
+          }
+        }
+        return receipt;
+      };
+      const hex = await redeemChance(cardId)
+      await waitForTransactionReceipt(hex);
       dispatch(setRemainingDraws(remainingDraws + 1));
-      // dispatch()
 
       const newCollection = userCollection.map((card, index) => {
-        console.log(cardId, index, "Does it match")
         if (card.id === cardId) {
           return { ...card, quantity: card.quantity - 4 };
         }
@@ -32,6 +45,7 @@ const AccountInformation = () => {
       });
       console.log(newCollection)
       dispatch(setCollection(newCollection));
+      console.log("Redeem"+ cardId+ "Successfully")
     } catch (error) {
       alert("Redeem Failed")
     }

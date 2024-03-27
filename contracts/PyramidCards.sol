@@ -76,6 +76,9 @@ contract PyramidCards is VRFConsumerBaseV2 {
     event CardRequest(address indexed owner, uint256 requestId);
     event CardDraw(address indexed owner, uint256 id); // Event to log which card is drawn
     event PoolCreated(address indexed admin, uint256[] ids); // Event to log pool
+    event CardDraw2(address indexed admin, uint256[] ids); // Event to log pool
+    event CardDraw3(address indexed admin, string collectionName); // Event to log pool
+
     event CardRedeemed(address indexed owner, uint256 id, uint256 balance);  // Event to log user redeem and new balance
 
     // ============================================== User Functions ==============================================
@@ -237,7 +240,14 @@ contract PyramidCards is VRFConsumerBaseV2 {
         uint256 cardId = poolNameToIds[collection][cardIndex];
 
         // emit the event of drawed card
-        emit CardDraw(cardOwner, cardId);
+        emit CardDraw3(cardOwner, collection);
+        
+        emit CardDraw2(cardOwner, poolNameToIds[collection]);
+
+        emit CardDraw(cardOwner, rng);
+        emit CardDraw(cardOwner, cardIndex);
+        emit CardDraw(cardOwner, poolNameToIds[collection][cardIndex]);
+
 
         // user draw this card
         // if this card already be possessed?
@@ -267,14 +277,14 @@ contract PyramidCards is VRFConsumerBaseV2 {
 
     // get cardId from the chance array and rng
     function getCardIdFromRng(uint256 rng, string memory collection) private view returns (uint256) {
-        uint256 cumulativeSum = 0;
+        uint256 lowerBound = 0;
         uint256[] memory chanceArray = getChanceArray(collection);
         uint256 i;
         for (i = 0; i < chanceArray.length; i++) {
-            if (rng >= cumulativeSum && rng < cumulativeSum + chanceArray[i]) {
+            if (rng >= lowerBound && rng < chanceArray[i]) {
                 break;
             }
-            cumulativeSum = cumulativeSum + chanceArray[i];
+            lowerBound = chanceArray[i];
         }
         return i;
     }
