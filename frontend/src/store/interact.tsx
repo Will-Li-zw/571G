@@ -348,7 +348,7 @@ export const drawCard = async (collection:string): Promise<number> => {
                 if (events.length > 0) {
                     console.log("Event found:", events);
                     clearInterval(interval);
-                    resolve(events[2]); // Assuming you're interested in the first event found
+                    resolve(events[0]); // Assuming you're interested in the first event found
                 }
             }, 5000); // Check every 5 seconds
         });
