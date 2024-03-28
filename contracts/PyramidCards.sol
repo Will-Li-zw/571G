@@ -145,12 +145,25 @@ contract PyramidCards is VRFConsumerBaseV2 {
             remove1ofId(msg.sender, id);        // may revert if quantity not match
         }
 
+  
         // remove the Card if quantity == 0
+        bool doubleCheck = false;       // guard boolean
         for (uint256 i = 0; i < userCollection[msg.sender].length; i++){
+            if (doubleCheck){
+                i -= 1;
+                doubleCheck = false;
+            }
             // Remove the card from array if the quantity is now zero
             if (userCollection[msg.sender][i].quantity == 0) {
                 removeCardFromCollection(msg.sender, i);
+                doubleCheck = true; // need to go back to this loop in the next update
             }
+        }
+
+        // TODO: have not yet tested: 
+        if (doubleCheck){   // this means that there's still one entry left in the array to be checked
+            removeCardFromCollection(msg.sender, 0);
+            doubleCheck = false;
         }
     }
     

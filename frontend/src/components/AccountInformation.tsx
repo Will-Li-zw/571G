@@ -67,31 +67,32 @@ const AccountInformation = () => {
           My Collection
         </Typography>
         <Grid container spacing={2}>
-          {collection.map((card) => (
-            <Grid item xs={12} sm={6} md={3} key={card.id}>
-              <Card>
-                <CardMedia
-                  component="img"
-                  height="140"
-                  image={cardImageMap[card.id] || 'https://via.placeholder.com/150'}
-                  alt={`Card ${card.id}`}
-                />
-                <CardContent>
-                  <Typography variant="body1" textAlign="center">
-                    {`Card ${card.id} (x${card.quantity})`}
-                  </Typography>
-                  <Button 
-                    variant="contained" 
-                    color="primary" 
-                    onClick={() => handleCardButtonClick(card.id)}
-                    style={{marginTop: '10px'}}
-                  >
-                    Redeem
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
+        {collection.filter(card => card.quantity !== 0).map((card) => (
+  <Grid item xs={12} sm={6} md={3} key={card.id}>
+    <Card>
+      <CardMedia
+        component="img"
+        height="140"
+        image={cardImageMap[card.id] || 'https://via.placeholder.com/150'}
+        alt={`Card ${card.id}`}
+      />
+      <CardContent>
+        <Typography variant="body1" textAlign="center">
+          {`Card ${card.id} (x${card.quantity})`}
+        </Typography>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={() => handleCardButtonClick(card.id)}
+          style={{marginTop: '10px'}}
+        >
+          Redeem
+        </Button>
+      </CardContent>
+    </Card>
+  </Grid>
+))}
+
         </Grid>
       </Grid>
     </Grid>

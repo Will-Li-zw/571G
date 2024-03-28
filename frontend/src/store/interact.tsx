@@ -8,7 +8,7 @@ import { BigNumber } from "ethers";
 // Setup your Web3 instance and contract
 const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");
 const contractABI = require('../artifacts/contracts/PyramidCards.sol/PyramidCards.json');
-const contractAddress = "0x030C467a80c1F237c0621DbE62fb772C4c26C809";
+const contractAddress = "0x139E18F5CD80BcC6f4646f1EeC3c4b93277a2Fe7";
 const contract = new web3.eth.Contract(contractABI.abi, contractAddress);
 declare let ethereum: any;
 export async function addBalanceToContract( valueInEther: string, gasPrice = 'fast') {
