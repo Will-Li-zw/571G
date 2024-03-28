@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import "VRFCoordinatorV2Interface.sol";
+import "VRFConsumerBaseV2.sol";
 
 contract PyramidCards is VRFConsumerBaseV2 {
     struct Card {
@@ -142,25 +142,12 @@ contract PyramidCards is VRFConsumerBaseV2 {
             remove1ofId(msg.sender, id);        // may revert if quantity not match
         }
 
-  
         // remove the Card if quantity == 0
-        bool doubleCheck = false;       // guard boolean
         for (uint256 i = 0; i < userCollection[msg.sender].length; i++){
-            if (doubleCheck){
-                i -= 1;
-                doubleCheck = false;
-            }
             // Remove the card from array if the quantity is now zero
             if (userCollection[msg.sender][i].quantity == 0) {
                 removeCardFromCollection(msg.sender, i);
-                doubleCheck = true; // need to go back to this loop in the next update
             }
-        }
-
-        // TODO: have not yet tested: 
-        if (doubleCheck){   // this means that there's still one entry left in the array to be checked
-            removeCardFromCollection(msg.sender, 0);
-            doubleCheck = false;
         }
     }
     
@@ -250,8 +237,7 @@ contract PyramidCards is VRFConsumerBaseV2 {
         uint256 cardId = poolNameToIds[collection][cardIndex];
 
         // emit the event of drawed card
-        emit CardDraw(cardOwner, poolNameToIds[collection][cardIndex]);
-
+        emit CardDraw(cardOwner, cardId);
 
         // user draw this card
         // if this card already be possessed?
@@ -281,14 +267,14 @@ contract PyramidCards is VRFConsumerBaseV2 {
 
     // get cardId from the chance array and rng
     function getCardIdFromRng(uint256 rng, string memory collection) private view returns (uint256) {
-        uint256 lowerBound = 0;
+        uint256 cumulativeSum = 0;
         uint256[] memory chanceArray = getChanceArray(collection);
         uint256 i;
         for (i = 0; i < chanceArray.length; i++) {
-            if (rng >= lowerBound && rng < chanceArray[i]) {
+            if (rng >= cumulativeSum && rng < cumulativeSum + chanceArray[i]) {
                 break;
             }
-            lowerBound = chanceArray[i];
+            cumulativeSum = cumulativeSum + chanceArray[i];
         }
         return i;
     }
