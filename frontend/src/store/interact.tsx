@@ -464,3 +464,42 @@ export const redeemChance = async ( id: number): Promise<any> => {
         throw new Error('Failed to redeemChance');
     }
 };
+
+export const withDrawBalance = async (): Promise<any> => {
+    try {
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
+
+        // Encode the function call
+        const data = contract.methods.adminDrawMoney( ).encodeABI();
+
+        // Estimate gas for the transaction
+        const gasEstimate = await contract.methods.adminDrawMoney().estimateGas({
+            from: account,
+        });
+
+        // Get current gas price from the network
+        const currentGasPrices = await ethereum.request({ method: 'eth_gasPrice' });
+
+        // Set up transaction parameters
+        const transactionParameters = {
+            to: contract.options.address, // Ensure you're using the correct contract address accessor based on your web3 version
+            from: account,
+            gas: web3.utils.toHex(gasEstimate), // Convert gas estimate to hex
+            gasPrice: web3.utils.toHex(currentGasPrices), // Use current gas price
+            data: data, // Encoded function call
+        };
+
+        // Send the transaction
+        const txHash = await ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [transactionParameters],
+        });
+        console.log('Award redeem initiated. Transaction Hash:', txHash);
+        
+        return txHash; // Placeholder return, adjust based on how you retrieve the result post-transaction.
+    } catch (error) {
+        console.error('Failed to withdraw:', error);
+        throw new Error('Failed to withdraw');
+    }
+};
