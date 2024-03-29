@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 // Import useSelector and useDispatch from 'react-redux' for accessing and dispatching state
 import { useSelector, useDispatch } from 'react-redux';
 // Import Material UI components for UI design
-import { Box, Button, Card, CardContent, Typography, CardMedia, Select, MenuItem, Grid, TextField, List, ListItem, ListItemText } from '@mui/material';
+import { Box, Button, Card, CardContent, Typography, CardMedia, Select, MenuItem, Grid, TextField, List, ListItem, ListItemText, Backdrop, CircularProgress } from '@mui/material';
 // Import actions from your userSlice for updating the Redux store
 import { setRemainingDraws, setCollection } from '../store/userSlice';
 // Import the RootState type from your store for TypeScript typing of state
@@ -27,38 +27,39 @@ export const DrawCard = () => {
   const [buyAmount, setBuyAmount] = useState('');
   const [drawnCard, setDrawnCard] = useState(0);
   const [displayingCard, setDisplayingCard] = useState<number | null>(null); // State for the simulated draw process
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Function to handle the drawing of a card with probability
-  const drawCardWithProbability = (poolName: string) => {
-    const pool = pools[poolName];
-    if (!pool) return null;
+  // Function to handle the drawing of a card with probability, not used now
+  // const drawCardWithProbability = (poolName: string) => {
+  //   const pool = pools[poolName];
+  //   if (!pool) return null;
 
-    let totalProb = 0;
-    const rand = Math.random();
-    for (let card of pool) {
-      totalProb += card.prob;
-      if (rand <= totalProb) {
-        simulateDrawingProcess(card.id, pool); // Simulate the drawing process
-        return card.id;
-      }
-    }
-    return null;
-  };
+  //   let totalProb = 0;
+  //   const rand = Math.random();
+  //   for (let card of pool) {
+  //     totalProb += card.prob;
+  //     if (rand <= totalProb) {
+  //       simulateDrawingProcess(card.id, pool); // Simulate the drawing process
+  //       return card.id;
+  //     }
+  //   }
+  //   return null;
+  // };
 
-  // Function to simulate the draw process
-  const simulateDrawingProcess = (finalCardId: number, pool: any[]) => {
-    let count = 0;
-    const maxIterations = 10; // Define the total number of iterations for the simulation
-    const intervalId = setInterval(() => {
-      const randomCardIndex = Math.floor(Math.random() * pool.length);
-      setDisplayingCard(pool[randomCardIndex].id);
-      count++;
-      if (count >= maxIterations) {
-        clearInterval(intervalId);
-        setDrawnCard(finalCardId); // Set the final drawn card
-      }
-    }, 100); // Change the card every 100ms
-  };
+  // Function to simulate the draw process, not used
+  // const simulateDrawingProcess = (finalCardId: number, pool: any[]) => {
+  //   let count = 0;
+  //   const maxIterations = 10; // Define the total number of iterations for the simulation
+  //   const intervalId = setInterval(() => {
+  //     const randomCardIndex = Math.floor(Math.random() * pool.length);
+  //     setDisplayingCard(pool[randomCardIndex].id);
+  //     count++;
+  //     if (count >= maxIterations) {
+  //       clearInterval(intervalId);
+  //       setDrawnCard(finalCardId); // Set the final drawn card
+  //     }
+  //   }, 100); // Change the card every 100ms
+  // };
 
   // Function to handle the "Draw" button click
   const handleDrawClick = async () => {
@@ -66,9 +67,12 @@ export const DrawCard = () => {
       // const drawnCardId = drawCardWithProbability(selectedPool);
       let drawnCardId = 0;
       try {
+        setIsLoading(true);
         drawnCardId = await drawCard(selectedPool);
         alert("Congratulation, You have drawn the card:"+drawnCardId )
+        setIsLoading(false);
       } catch (error) {
+        setIsLoading(false);
         console.log("API FAIL")
         alert("Draw API card failed");
         return
@@ -101,14 +105,17 @@ export const DrawCard = () => {
     // This call returns a transaction hash.
     const txHash = await addBalanceToContract((amount * 0.001).toString());
     console.log(`Transaction Hash: ${txHash}`);
+    setIsLoading(true);
   
     // Wait for the transaction to be mined
     const receipt = await waitForTransactionReceipt(txHash);
   
     if (receipt && receipt.status) {
       // Transaction was successful, update the balance
+      setIsLoading(false);
       alert('Transaction confirmed');
       dispatch(setRemainingDraws(remainingDraws + amount));
+
     } else {
       // Handle transaction failure
       alert('Transaction failed or was not confirmed.');
@@ -137,6 +144,9 @@ export const DrawCard = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
+      <Backdrop open={isLoading}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
       <Typography variant="h4" gutterBottom>
         Draw a Card
       </Typography>
@@ -159,7 +169,14 @@ export const DrawCard = () => {
             <List sx={{ mt: 2 }} dense>
               {pools[selectedPool].map((card) => (
                 <ListItem key={card.id}>
-                  <ListItemText primary={`Card ID: ${card.id} - Probability: ${card.prob}`} />
+                  <CardMedia
+                component="img"
+                image={cardImageMap[card.id] || 'https://via.placeholder.com/150'}
+                alt={`Card ${displayingCard}`}
+                sx={{ p: 2, width: "50px", height: "50px" }}
+                />
+                  <ListItemText primary={ `Probability: ${card.prob}`} />
+
                 </ListItem>
               ))}
             </List>

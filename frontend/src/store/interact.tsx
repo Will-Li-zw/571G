@@ -8,7 +8,7 @@ import { BigNumber } from "ethers";
 // Setup your Web3 instance and contract
 const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");
 const contractABI = require('../artifacts/contracts/PyramidCards.sol/PyramidCards.json');
-const contractAddress = "0x139E18F5CD80BcC6f4646f1EeC3c4b93277a2Fe7";
+const contractAddress = "0x3985FE9467809d13891d22c005AC20A70424aBB2";
 const contract = new web3.eth.Contract(contractABI.abi, contractAddress);
 declare let ethereum: any;
 export async function addBalanceToContract( valueInEther: string, gasPrice = 'fast') {
@@ -361,8 +361,8 @@ export const drawCard = async (collection:string): Promise<number> => {
     console.log("DRAWCARD RESULT", event.returnValues.cardId)
     return parseInt(event.returnValues.id) // Placeholder return, adjust based on how you retrieve the result post-transaction.
 } catch (error) {
-    console.error('Failed to create collection:', error);
-    throw new Error('Failed to create collection');
+    console.error('Failed to draw card:', error);
+    throw new Error('Failed to draw card');
 }
 };
 
@@ -416,17 +416,12 @@ export const redeemAward = async ( awardName: string): Promise<any> => {
             method: 'eth_sendTransaction',
             params: [transactionParameters],
         });
-        
-        // return event.returnValues;
-        // Since we cannot directly get the function return value from a transaction, we would need to watch for the transaction to be mined
-        // and then use an event emitted by the contract (if available) to get the resultant IDs.
-        // For this example, we're assuming you need to adapt this part based on your contract's events and how you're handling them.
         console.log('Award redeem initiated. Transaction Hash:', txHash);
         
         return txHash; // Placeholder return, adjust based on how you retrieve the result post-transaction.
     } catch (error) {
-        console.error('Failed to create collection:', error);
-        throw new Error('Failed to create collection');
+        console.error('Failed to redeem:', error);
+        throw new Error('Failed to redeem');
     }
 };
 
@@ -465,7 +460,7 @@ export const redeemChance = async ( id: number): Promise<any> => {
         
         return txHash; // Placeholder return, adjust based on how you retrieve the result post-transaction.
     } catch (error) {
-        console.error('Failed to create collection:', error);
-        throw new Error('Failed to create collection');
+        console.error('Failed to redeemChance:', error);
+        throw new Error('Failed to redeemChance');
     }
 };

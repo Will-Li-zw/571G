@@ -1,7 +1,8 @@
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useState } from 'react';
 // import { Grid, Card as MuiCard, CardContent, Button, Typography, CardMedia } from '@mui/material';
-import { Grid, Card, CardActionArea, CardActions, CardContent, Button, Typography, CardMedia, Box } from '@mui/material';
+import { Grid, Card, CardActionArea, CardActions, CardContent, Button, Typography, CardMedia, Box,Backdrop,CircularProgress } from '@mui/material';
 import { setCollection } from '../store/userSlice'; // Adjust the import path as necessary
 import { RootState } from '../store/store';
 import { redeemAward } from '../store/interact';
@@ -14,7 +15,7 @@ export interface RewardMap {
 export const Store = () => {
   const dispatch = useDispatch();
   const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");;
-
+  const [isLoading, setIsLoading] = useState(false);
   const userCollection = useSelector((state: RootState) => state.user.collection);
   const storeContent: RewardMap = useSelector((state: RootState) => state.reward);
   const cardImage = useSelector((state: RootState) => state.cardImageMap);
@@ -32,12 +33,15 @@ export const Store = () => {
       // Simulate an API call
       try {
         const waitForTransactionReceipt = async (hash: any) => {
+          setIsLoading(true)
           let receipt = null;
           while (receipt === null) { // Polling for receipt
             try {
               receipt = await web3.eth.getTransactionReceipt(hash);
               // Wait for a short period before polling again to avoid rate limits
               await new Promise(resolve => setTimeout(resolve, 2000));
+              setIsLoading(false)
+
             } catch (error) {
               await new Promise(resolve => setTimeout(resolve, 2000));
               console.error('Error fetching transaction receipt: ', error);
@@ -77,6 +81,9 @@ export const Store = () => {
 
   return (
     <Grid container spacing={2} sx={{ padding: 2 }}>
+      <Backdrop open={isLoading}>
+      <CircularProgress color="inherit" />
+      </Backdrop>
       {Object.entries(storeContent).map(([rewardName, rewards]) => (
         <Grid item xs={12} sm={6} lg={4} key={rewardName}>
           <Card raised sx={{ maxWidth: 345, mb: 2 }}>

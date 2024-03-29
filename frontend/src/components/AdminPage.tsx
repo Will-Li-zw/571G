@@ -1,7 +1,7 @@
 // Adjust paths as necessary
 import React, { useState } from 'react';
 import { useDispatch ,useSelector} from 'react-redux';
-import { Box, Button, TextField, Typography } from '@mui/material';
+import { Box, Button, TextField, Typography, Backdrop, CircularProgress} from '@mui/material';
 import { setRewardMap } from '../store/rewardMapSlice';
 import { setPoolProbMap } from '../store/poolProbMapSlice';
 import { setCardImageMap } from '../store/cardImageMapSlice';
@@ -18,6 +18,8 @@ export const AdminPage = () => {
   const [cards, setCards] = useState([{ url: '', prob: '' }]);
   const [awardName, setAwardName] = useState('');
   const pools = useSelector((state: RootState) => state.pool);
+  const [isLoading, setIsLoading] = useState(false);
+
 
 
   const handleCardChange = (index: number, field: any, value: any) => {
@@ -46,6 +48,7 @@ export const AdminPage = () => {
     const startingId = Object.keys(cardImageMap).reduce((maxId, currentId) => Math.max(maxId, parseInt(currentId, 10)), 0) + 1;
 
     try {
+      setIsLoading(true)
       const cardIds = await adminCreate(collectorName, awardName, cards.map(card => parseFloat(card.prob)*100), cards.map(card => card.url));
       // // Assuming each card quantity is 1 for simplicity
       // const awardCards = cards.map((card, index) => ({ id: index + 100, quantity: 1 })); // Example ID logic
@@ -53,6 +56,7 @@ export const AdminPage = () => {
       // const cardIds = cards.map((_, index) => index + 100); // Mock IDs as incremental numbers
       
       // Dispatch updates to Redux
+      setIsLoading(false)
       dispatch(setRewardMap({...storeContent, [awardName]: cardIds.map(id => ({ id, quantity: 1 })) }));
       dispatch(setPoolProbMap({ ...pools, [collectorName]: cards.map((card, index) => ({ id: cardIds[index], prob: parseFloat(card.prob) })) }));
       dispatch(setCardImageMap({
@@ -65,6 +69,7 @@ export const AdminPage = () => {
       alert('Submission successful!');
 
   } catch (error:any) {
+      setIsLoading(true)
       alert(`Submission failed: ${error.message}`);
   }
     const cardIds = cards.map((_, index) => index + 100); // Mock IDs as incremental numbers
@@ -74,6 +79,9 @@ export const AdminPage = () => {
 
   return (
   <Box sx={{ '& > :not(style)': { m: 1 }, marginTop: 5 }}>
+        <Backdrop open={isLoading}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
     <Typography variant="h4" gutterBottom>
       Admin Page
     </Typography>

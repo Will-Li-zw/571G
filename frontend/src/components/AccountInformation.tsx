@@ -1,12 +1,12 @@
 // AccountInformation.tsx
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Typography, Card, CardContent, CardMedia, Grid, CircularProgress, Button } from '@mui/material';
+import { Typography, Card, CardContent, CardMedia, Grid, CircularProgress, Button, Backdrop } from '@mui/material';
 import { RootState } from '../store/store';
 import { redeemChance } from '../store/interact';
 import { setCollection, setRemainingDraws } from '../store/userSlice';
 import { Web3 } from 'web3';
-
+import { useState } from 'react';
 const AccountInformation = () => {
   const { remainingDraws, collection } = useSelector((state: RootState) => state.user);
   const cardImageMap = useSelector((state: RootState) => state.cardImageMap);
@@ -14,6 +14,7 @@ const AccountInformation = () => {
   const dispatch = useDispatch();
   const userCollection = useSelector((state: RootState) => state.user.collection);
   const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleCardButtonClick = async(cardId: number) => {
     // This function will be called when the button under a card is clicked.
@@ -21,11 +22,13 @@ const AccountInformation = () => {
     try {
       const waitForTransactionReceipt = async (hash: any) => {
         let receipt = null;
+        setIsLoading(true)
         while (receipt === null) { // Polling for receipt
           try {
             receipt = await web3.eth.getTransactionReceipt(hash);
             // Wait for a short period before polling again to avoid rate limits
             await new Promise(resolve => setTimeout(resolve, 2000));
+            setIsLoading(false)
           } catch (error) {
             await new Promise(resolve => setTimeout(resolve, 2000));
             console.error('Error fetching transaction receipt: ', error);
@@ -45,8 +48,11 @@ const AccountInformation = () => {
       });
       console.log(newCollection)
       dispatch(setCollection(newCollection));
+      alert("Redeem"+ cardId+ "Successfully")
       console.log("Redeem"+ cardId+ "Successfully")
     } catch (error) {
+      setIsLoading(false)
+
       alert("Redeem Failed")
     }
   };
@@ -57,6 +63,9 @@ const AccountInformation = () => {
 
   return (
     <Grid container spacing={2} padding={2} alignItems="flex-start">
+      <Backdrop open={isLoading}>
+      <CircularProgress color="inherit" />
+      </Backdrop>
       <Grid item xs={12}>
         <Typography variant="h5" gutterBottom>
           Draw Times Remaining: {remainingDraws}
@@ -68,7 +77,7 @@ const AccountInformation = () => {
         </Typography>
         <Grid container spacing={2}>
         {collection.filter(card => card.quantity !== 0).map((card) => (
-  <Grid item xs={12} sm={6} md={3} key={card.id}>
+      <Grid item xs={12} sm={6} md={3} key={card.id}>
     <Card>
       <CardMedia
         component="img"
