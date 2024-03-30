@@ -158,10 +158,10 @@ contract PyramidCards is VRFConsumerBaseV2 {
         }
 
         // TODO: have not yet tested: 
-        if (doubleCheck){   // this means that there's still one entry left in the array to be checked
-            removeCardFromCollection(msg.sender, 0);
-            doubleCheck = false;
-        }
+        // if (doubleCheck){   // this means that there's still one entry left in the array to be checked
+        //     removeCardFromCollection(msg.sender, 0);
+        //     doubleCheck = false;
+        // }
     }
     
     // Helper function to reduce a card quantity

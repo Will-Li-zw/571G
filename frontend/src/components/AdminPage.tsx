@@ -7,7 +7,8 @@ import { setPoolProbMap } from '../store/poolProbMapSlice';
 import { setCardImageMap } from '../store/cardImageMapSlice';
 import { RootState } from '../store/store';
 import { RewardMap ,Card} from '../types';
-import { adminCreate } from '../store/interact';
+import { adminCreate, withDrawBalance } from '../store/interact';
+import Web3 from 'web3';
 
 export const AdminPage = () => {
   const cardImageMap = useSelector((state: RootState) => state.cardImageMap);
@@ -19,8 +20,37 @@ export const AdminPage = () => {
   const [awardName, setAwardName] = useState('');
   const pools = useSelector((state: RootState) => state.pool);
   const [isLoading, setIsLoading] = useState(false);
+  const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");;
 
+  const handleWithDraw = async() =>{
+    try {
+      const waitForTransactionReceipt = async (hash: any) => {
+        let receipt = null;
+        setIsLoading(true)
+        while (receipt === null) { // Polling for receipt
+          try {
+            receipt = await web3.eth.getTransactionReceipt(hash);
+            // Wait for a short period before polling again to avoid rate limits
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            setIsLoading(false)
+          } catch (error) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            console.error('Error fetching transaction receipt: ', error);
+          }
+        }
+        return receipt;
+      };
+      const response = await withDrawBalance();
+      console.log(response)
+      await waitForTransactionReceipt(response)
+      setIsLoading(false)
+      alert("withdraw successfully")
+    } catch (error) {
+      console.log("Withdraw fail"+error)
+      
+    }
 
+  }
 
   const handleCardChange = (index: number, field: any, value: any) => {
     const newCards = [...cards];
@@ -85,6 +115,9 @@ export const AdminPage = () => {
     <Typography variant="h4" gutterBottom>
       Admin Page
     </Typography>
+    <Button onClick={handleWithDraw} variant="contained" color="primary" sx={{ mt: 2 }}>
+      WithDraw Balance
+    </Button>
     <TextField
       label="Collector Name"
       value={collectorName}

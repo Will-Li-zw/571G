@@ -8,7 +8,7 @@ import { BigNumber } from "ethers";
 // Setup your Web3 instance and contract
 const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/z850kJyohcSo3z59MLbQS65ASRz9NavH");
 const contractABI = require('../artifacts/contracts/PyramidCards.sol/PyramidCards.json');
-const contractAddress = "0x3985FE9467809d13891d22c005AC20A70424aBB2";
+const contractAddress = "0x251E7C26FF592f5Cdc6Aed52BFc70c42B3eD025f";
 const contract = new web3.eth.Contract(contractABI.abi, contractAddress);
 declare let ethereum: any;
 export async function addBalanceToContract( valueInEther: string, gasPrice = 'fast') {
@@ -358,7 +358,6 @@ export const drawCard = async (collection:string): Promise<number> => {
     const startTime = new Date().getTime();
     const timeout = 600000; // Set timeout (60 seconds in this example)
     const event:any = await pollForCardDrawEvent(startTime, timeout);
-    console.log("DRAWCARD RESULT", event.returnValues.cardId)
     return parseInt(event.returnValues.id) // Placeholder return, adjust based on how you retrieve the result post-transaction.
 } catch (error) {
     console.error('Failed to draw card:', error);
