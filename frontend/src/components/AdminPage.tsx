@@ -115,9 +115,10 @@ export const AdminPage = () => {
     <Typography variant="h4" gutterBottom>
       Admin Page
     </Typography>
-    <Button onClick={handleWithDraw} variant="contained" color="primary" sx={{ mt: 2 }}>
-      WithDraw Balance
-    </Button>
+
+    <Typography variant="h6" gutterBottom>
+      Create Collection
+    </Typography>
     <TextField
       label="Collector Name"
       value={collectorName}
@@ -151,6 +152,12 @@ export const AdminPage = () => {
       margin="normal"
     />
     <Button onClick={handleSubmit} variant="contained" color="primary" sx={{ mt: 2 }}>
+      Submit
+    </Button>
+    <Typography variant="h6" gutterBottom>
+      WithDraw Balance
+    </Typography>
+    <Button onClick={handleWithDraw} variant="contained" color="primary" sx={{ mt: 2 }}>
       Submit
     </Button>
   </Box>
