@@ -1,6 +1,6 @@
 # Pyramid Project
 
-Step1 Deploy your contract on Sepolia
+Step1.1 Deploy your own contract on Sepolia
 Remember to add .env file at the root directory
 ```shell
 # ETHERSCAN_API_KEY=<ETHERSCAN_API_KEY>
@@ -19,7 +19,14 @@ yarn hardhat deploy --network sepolia
 ```
 Copy paste the generated block chain adress to contractAddress in interact.tsx
 
+Step1.2 Use existed contract
+```shell
+nvm use 18
+yarn
+yarn hardhat compile
+```
 
+Step2
 Then enter frontend and run web app
 
 ```shell
