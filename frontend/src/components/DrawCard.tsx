@@ -103,7 +103,8 @@ export const DrawCard = () => {
     const amount = parseInt(buyAmount, 10) || 0;
     
     // This call returns a transaction hash.
-    const txHash = await addBalanceToContract((amount * 0.001).toString());
+    console.log(amount)
+    const txHash = await addBalanceToContract(amount.toString());
     console.log(`Transaction Hash: ${txHash}`);
     setIsLoading(true);
   

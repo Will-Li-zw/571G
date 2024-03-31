@@ -15,7 +15,7 @@ export async function addBalanceToContract( valueInEther: string, gasPrice = 'fa
     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
     const account = accounts[0];
     console.log("new Account", account)
-    const valueInWei = web3.utils.toWei(valueInEther, 'ether');
+    const valueInWei = (parseInt(web3.utils.toWei(valueInEther, 'ether'))*0.001).toString();
     const gasLimitEstimate = await contract.methods.addBalance().estimateGas({
         from: account,
         value: valueInWei,
