@@ -36,9 +36,6 @@ export const HomePage = () => {
     <Container maxWidth="lg">
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Logo
-          </Typography>
           <WalletStatus/>
           <Button color="inherit" onClick={handleSignOut}>Sign out</Button>
         </Toolbar>
